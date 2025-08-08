@@ -31,7 +31,7 @@ function renderDashboard() {
     renderEmpresas();
 }
 
-// Renderizar resumo do mês
+// Renderizar resumo do mês com cores temáticas
 function renderResumo() {
     const totalFaturado = controles.reduce((sum, c) => sum + c.valor_total, 0);
     const totalEmpresas = empresas.length;
@@ -41,11 +41,26 @@ function renderResumo() {
 
     const resumoStats = document.querySelector('.resumo-stats');
     resumoStats.innerHTML = `
-        <span>Total Faturado: <strong>R$ ${totalFaturado.toFixed(2).replace('.', ',')}</strong></span>
-        <span>Empresas: <strong>${totalEmpresas}</strong></span>
-        <span>Concluídas: <strong>${concluidas}</strong></span>
-        <span>Pendentes: <strong>${pendentes}</strong></span>
-        <span>Com Erro: <strong>${comErro}</strong></span>
+        <div class="stat-item stat-faturado">
+            <span class="stat-label">💰 Total Faturado</span>
+            <span class="stat-value">R$ ${totalFaturado.toFixed(2).replace('.', ',')}</span>
+        </div>
+        <div class="stat-item stat-empresas">
+            <span class="stat-label">🏢 Empresas</span>
+            <span class="stat-value">${totalEmpresas}</span>
+        </div>
+        <div class="stat-item stat-concluidas">
+            <span class="stat-label">✅ Concluídas</span>
+            <span class="stat-value">${concluidas}</span>
+        </div>
+        <div class="stat-item stat-pendentes">
+            <span class="stat-label">⏳ Pendentes</span>
+            <span class="stat-value">${pendentes}</span>
+        </div>
+        <div class="stat-item stat-erro">
+            <span class="stat-label">❌ Com Erro</span>
+            <span class="stat-value">${comErro}</span>
+        </div>
     `;
 }
 
@@ -130,8 +145,11 @@ function createActionButtons(empresaId, status, controle) {
     // Botões baseados no status
     switch (status) {
         case 'pendente':
-            buttons.push(`<button class="btn btn-primary btn-small" onclick="editarEmpresa(${empresaId})">
-                <i class="fas fa-plus"></i> Lançar
+            buttons.push(`<button class="btn btn-primary btn-small" onclick="modalLancamentoRapido(${empresaId})">
+                <i class="fas fa-plus"></i> Lançar Dia
+            </button>`);
+            buttons.push(`<button class="btn btn-secondary btn-small" onclick="editarEmpresa(${empresaId})">
+                <i class="fas fa-list"></i> Ver Todos
             </button>`);
             break;
         case 'erro-nf':
@@ -148,8 +166,11 @@ function createActionButtons(empresaId, status, controle) {
             </button>`);
             break;
         default:
-            buttons.push(`<button class="btn btn-primary btn-small" onclick="editarEmpresa(${empresaId})">
-                <i class="fas fa-edit"></i> Editar
+            buttons.push(`<button class="btn btn-primary btn-small" onclick="modalLancamentoRapido(${empresaId})">
+                <i class="fas fa-plus"></i> Lançar Dia
+            </button>`);
+            buttons.push(`<button class="btn btn-secondary btn-small" onclick="editarEmpresa(${empresaId})">
+                <i class="fas fa-edit"></i> Gerenciar
             </button>`);
             buttons.push(`<button class="btn btn-success btn-small" onclick="avancarStatusProximo(${empresaId})">
                 <i class="fas fa-arrow-right"></i> Avançar
@@ -219,7 +240,7 @@ ${templateProcessado.corpo}`;
 }
 
 
-// Gerar PDF do relatório com tema Unaí Marmitas
+// Gerar PDF profissional com logo
 function gerarPDF(empresaId) {
     const empresa = empresas.find(e => e.id === empresaId);
     const controle = controles.find(c => c.empresa_id === empresaId);
@@ -240,121 +261,146 @@ function gerarPDF(empresaId) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
-        // Configurações do tema Unaí Marmitas
+        // Configurações do tema profissional
         const pageWidth = doc.internal.pageSize.width;
         const pageHeight = doc.internal.pageSize.height;
         const margin = 20;
         let currentY = margin;
         
-        // Cores do tema (Amarelo e Preto)
+        // Cores do tema profissional
         const primaryColor = [255, 215, 0]; // Amarelo
         const secondaryColor = [26, 26, 26]; // Preto
-        const accentColor = [255, 193, 7]; // Amarelo mais escuro
+        const lightGray = [248, 249, 250]; // Cinza claro
         const textColor = [51, 51, 51]; // Cinza escuro
         
-        // HEADER - Fundo amarelo com logo
+        // LOGO BASE64 (converta sua logo para base64)
+        const logoBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='; // PLACEHOLDER - coloque sua logo aqui
+        
+        // HEADER PROFISSIONAL
+        // Fundo do header
         doc.setFillColor(...primaryColor);
-        doc.rect(0, 0, pageWidth, 70, 'F');
+        doc.rect(0, 0, pageWidth, 80, 'F');
         
-        // Logo do Unaí Marmitas (usando sua logo base64)
-        const logoBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABDgAAAQ4CAYAAADsEGyPAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAEwGlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSfvu78nIGlkPSdXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQnPz4KPHg6eG1wbWV0YSB4bWxuczp4PSdhZG9iZTpuczptZXRhLyc+Cjxy...'; // Sua logo aqui
+        // Borda elegante do header
+        doc.setDrawColor(...secondaryColor);
+        doc.setLineWidth(2);
+        doc.line(0, 80, pageWidth, 80);
         
+        // Logo (se disponível)
         try {
-            doc.addImage(logoBase64, 'PNG', 25, 15, 40, 40);
+            if (logoBase64 && logoBase64 !== 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==') {
+                doc.addImage(logoBase64, 'PNG', 25, 15, 50, 50);
+            } else {
+                // Logo estilizado como fallback
+                drawCustomLogo(doc, 25, 15, 50, 50);
+            }
         } catch (error) {
-            // Fallback: Logo estilizada
-            doc.setFillColor(...secondaryColor);
-            doc.roundedRect(25, 15, 40, 40, 5, 5, 'F');
-            
-            // Ícone central
-            doc.setTextColor(...primaryColor);
-            doc.setFontSize(24);
-            doc.setFont('helvetica', 'bold');
-            doc.text('🍽️', 42, 38);
-            
-            // Texto da logo
-            doc.setFontSize(8);
-            doc.text('UNAÍ', 45, 50, { align: 'center' });
+            drawCustomLogo(doc, 25, 15, 50, 50);
         }
         
-        // Título do restaurante
+        // Informações da empresa (lado direito do header)
         doc.setTextColor(...secondaryColor);
-        doc.setFontSize(28);
+        doc.setFontSize(24);
         doc.setFont('helvetica', 'bold');
-        doc.text('UNAÍ MARMITAS', 75, 30);
+        doc.text('UNAÍ MARMITAS', 85, 30);
         
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'normal');
-        doc.text('Relatório Mensal de Consumo', 75, 42);
-        
-        // Data do relatório
-        doc.setFontSize(10);
-        doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 75, 52);
-        
-        currentY = 90;
-        
-        // INFORMAÇÕES DA EMPRESA
-        doc.setTextColor(...textColor);
-        doc.setFontSize(18);
-        doc.setFont('helvetica', 'bold');
-        doc.text('DADOS DA EMPRESA', margin, currentY);
-        currentY += 20;
-        
-        // Box da empresa com borda amarela
-        doc.setDrawColor(...primaryColor);
-        doc.setLineWidth(3);
-        doc.rect(margin, currentY, pageWidth - 2 * margin, 45);
-        
-        // Fundo levemente amarelo
-        doc.setFillColor(255, 248, 220);
-        doc.rect(margin + 1, currentY + 1, pageWidth - 2 * margin - 2, 43, 'F');
-        
-        doc.setTextColor(...secondaryColor);
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`Empresa: ${empresa.nome}`, margin + 10, currentY + 18);
-        
-        doc.setFont('helvetica', 'normal');
         doc.setFontSize(12);
-        doc.text(`Contato: ${empresa.contato || 'Não informado'}`, margin + 10, currentY + 28);
-        doc.text(`Email: ${empresa.email || 'Não informado'}`, margin + 10, currentY + 38);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Restaurante • Marmitas • Delivery', 85, 40);
+        doc.text('CNPJ: 00.000.000/0001-00', 85, 50);
+        doc.text('Telefone: (38) 99999-9999', 85, 58);
+        doc.text('Email: contato@unaimarmitas.com', 85, 66);
         
-        currentY += 65;
-        
-        // PERÍODO
-        doc.setTextColor(...textColor);
+        // Número do relatório e data
+        const numeroRelatorio = `REL-${currentMonth.replace('-', '')}-${String(empresa.id).padStart(3, '0')}`;
+        doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(18);
-        doc.text('PERÍODO DE REFERÊNCIA', margin, currentY);
-        currentY += 20;
+        doc.text(`Relatório Nº ${numeroRelatorio}`, pageWidth - margin, 25, { align: 'right' });
+        doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, pageWidth - margin, 35, { align: 'right' });
         
-        doc.setFillColor(...primaryColor);
-        doc.rect(margin, currentY, pageWidth - 2 * margin, 25, 'F');
+        currentY = 100;
         
-        doc.setTextColor(...secondaryColor);
-        doc.setFontSize(16);
-        doc.setFont('helvetica', 'bold');
-        const periodoTexto = getCurrentMonthText();
-        doc.text(periodoTexto, pageWidth / 2, currentY + 16, { align: 'center' });
+        // TÍTULO DO RELATÓRIO
+        doc.setFillColor(...lightGray);
+        doc.rect(margin, currentY, pageWidth - 2 * margin, 30, 'F');
+        doc.setDrawColor(...primaryColor);
+        doc.setLineWidth(1);
+        doc.rect(margin, currentY, pageWidth - 2 * margin, 30);
         
-        currentY += 45;
-        
-        // CONSUMO DE MARMITAS
         doc.setTextColor(...textColor);
         doc.setFontSize(18);
         doc.setFont('helvetica', 'bold');
-        doc.text('CONSUMO DE MARMITAS', margin, currentY);
+        doc.text('RELATÓRIO MENSAL DE CONSUMO', pageWidth / 2, currentY + 20, { align: 'center' });
+        
+        currentY += 50;
+        
+        // DADOS DA EMPRESA CLIENTE
+        addSectionHeader(doc, 'DADOS DO CLIENTE', currentY, pageWidth, margin, primaryColor, secondaryColor);
+        currentY += 15;
+        
+        const clienteBox = {
+            x: margin,
+            y: currentY,
+            width: pageWidth - 2 * margin,
+            height: 60
+        };
+        
+        // Box do cliente
+        doc.setFillColor(255, 255, 255);
+        doc.rect(clienteBox.x, clienteBox.y, clienteBox.width, clienteBox.height, 'F');
+        doc.setDrawColor(...primaryColor);
+        doc.setLineWidth(2);
+        doc.rect(clienteBox.x, clienteBox.y, clienteBox.width, clienteBox.height);
+        
+        // Informações do cliente
+        doc.setTextColor(...textColor);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Empresa: ${empresa.nome}`, clienteBox.x + 15, clienteBox.y + 20);
+        
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Contato: ${empresa.contato || 'Não informado'}`, clienteBox.x + 15, clienteBox.y + 35);
+        doc.text(`Email: ${empresa.email || 'Não informado'}`, clienteBox.x + 15, clienteBox.y + 50);
+        
+        // Período de referência (lado direito)
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Período de Referência:', clienteBox.x + clienteBox.width - 15, clienteBox.y + 20, { align: 'right' });
+        doc.setFontSize(14);
+        doc.setTextColor(...primaryColor);
+        doc.text(getCurrentMonthText(), clienteBox.x + clienteBox.width - 15, clienteBox.y + 35, { align: 'right' });
+        
+        currentY += 80;
+        
+        // DETALHAMENTO DE CONSUMO
+        addSectionHeader(doc, 'DETALHAMENTO DE CONSUMO', currentY, pageWidth, margin, primaryColor, secondaryColor);
         currentY += 25;
         
-        // Tabela de marmitas com tema amarelo/preto
+        // Tabela de marmitas profissional
         const tableData = [
             ['Tamanho', 'Quantidade', 'Valor Unitário', 'Subtotal'],
-            ['Pequena (P)', controle.qtd_pequena.toString(), `R$ ${precos.P.toFixed(2)}`, `R$ ${(controle.qtd_pequena * precos.P).toFixed(2)}`],
-            ['Média (M)', controle.qtd_media.toString(), `R$ ${precos.M.toFixed(2)}`, `R$ ${(controle.qtd_media * precos.M).toFixed(2)}`],
-            ['Grande (G)', controle.qtd_grande.toString(), `R$ ${precos.G.toFixed(2)}`, `R$ ${(controle.qtd_grande * precos.G).toFixed(2)}`]
+            [
+                'Pequena (P)', 
+                controle.qtd_pequena.toString(), 
+                `R$ ${precos.P.toFixed(2).replace('.', ',')}`, 
+                `R$ ${(controle.qtd_pequena * precos.P).toFixed(2).replace('.', ',')}`
+            ],
+            [
+                'Média (M)', 
+                controle.qtd_media.toString(), 
+                `R$ ${precos.M.toFixed(2).replace('.', ',')}`, 
+                `R$ ${(controle.qtd_media * precos.M).toFixed(2).replace('.', ',')}`
+            ],
+            [
+                'Grande (G)', 
+                controle.qtd_grande.toString(), 
+                `R$ ${precos.G.toFixed(2).replace('.', ',')}`, 
+                `R$ ${(controle.qtd_grande * precos.G).toFixed(2).replace('.', ',')}`
+            ]
         ];
         
-        drawStyledTable(doc, tableData, margin, currentY, pageWidth - 2 * margin);
+        drawProfessionalTable(doc, tableData, margin, currentY, pageWidth - 2 * margin, primaryColor, secondaryColor);
         currentY += (tableData.length * 15) + 25;
         
         // ITENS EXTRAS (se houver)
@@ -362,165 +408,287 @@ function gerarPDF(empresaId) {
         const valorExtras = controle.valor_total - valorMarmitas;
         
         if (valorExtras > 0 && controle.lancamentos_diarios) {
-            try {
-                const lancamentos = JSON.parse(controle.lancamentos_diarios);
-                const todosExtras = [];
+            const todosExtras = processarExtrasParaPDF(controle.lancamentos_diarios);
+            
+            if (todosExtras.length > 0) {
+                addSectionHeader(doc, 'ITENS EXTRAS', currentY, pageWidth, margin, primaryColor, secondaryColor);
+                currentY += 25;
                 
-                lancamentos.forEach(lancamento => {
-                    if (lancamento.extras && lancamento.extras.length > 0) {
-                        lancamento.extras.forEach(extra => {
-                            const existente = todosExtras.find(e => e.descricao === extra.descricao);
-                            if (existente) {
-                                existente.quantidade += extra.quantidade;
-                                existente.total += extra.total;
-                            } else {
-                                todosExtras.push({
-                                    descricao: extra.descricao,
-                                    quantidade: extra.quantidade,
-                                    valor_unitario: extra.valor_unitario,
-                                    total: extra.total
-                                });
-                            }
-                        });
-                    }
+                const extrasTableData = [['Descrição', 'Quantidade', 'Valor Unitário', 'Subtotal']];
+                
+                todosExtras.forEach(extra => {
+                    extrasTableData.push([
+                        extra.descricao,
+                        extra.quantidade.toString(),
+                        `R$ ${extra.valor_unitario.toFixed(2).replace('.', ',')}`,
+                        `R$ ${extra.total.toFixed(2).replace('.', ',')}`
+                    ]);
                 });
                 
-                if (todosExtras.length > 0) {
-                    doc.setTextColor(...textColor);
-                    doc.setFontSize(18);
-                    doc.setFont('helvetica', 'bold');
-                    doc.text('ITENS EXTRAS', margin, currentY);
-                    currentY += 25;
-                    
-                    const extrasTableData = [
-                        ['Descrição', 'Quantidade', 'Valor Unitário', 'Subtotal']
-                    ];
-                    
-                    todosExtras.forEach(extra => {
-                        extrasTableData.push([
-                            extra.descricao,
-                            extra.quantidade.toString(),
-                            `R$ ${extra.valor_unitario.toFixed(2)}`,
-                            `R$ ${extra.total.toFixed(2)}`
-                        ]);
-                    });
-                    
-                    drawStyledTable(doc, extrasTableData, margin, currentY, pageWidth - 2 * margin);
-                    currentY += (extrasTableData.length * 15) + 25;
-                }
-            } catch (error) {
-                console.error('Erro ao processar extras para PDF:', error);
+                drawProfessionalTable(doc, extrasTableData, margin, currentY, pageWidth - 2 * margin, primaryColor, secondaryColor);
+                currentY += (extrasTableData.length * 15) + 25;
             }
         }
         
-        // RESUMO FINANCEIRO
-        doc.setTextColor(...textColor);
-        doc.setFontSize(18);
-        doc.setFont('helvetica', 'bold');
-        doc.text('RESUMO FINANCEIRO', margin, currentY);
+        // RESUMO FINANCEIRO PROFISSIONAL
+        addSectionHeader(doc, 'RESUMO FINANCEIRO', currentY, pageWidth, margin, primaryColor, secondaryColor);
         currentY += 25;
         
-        // Box do resumo com tema amarelo
-        doc.setFillColor(255, 248, 220);
-        doc.rect(margin, currentY, pageWidth - 2 * margin, 70, 'F');
-        doc.setDrawColor(...primaryColor);
-        doc.setLineWidth(3);
-        doc.rect(margin, currentY, pageWidth - 2 * margin, 70);
+        const resumoBox = {
+            x: margin,
+            y: currentY,
+            width: pageWidth - 2 * margin,
+            height: 80
+        };
         
-        doc.setTextColor(...secondaryColor);
-        doc.setFontSize(14);
+        // Background do resumo
+        doc.setFillColor(...lightGray);
+        doc.rect(resumoBox.x, resumoBox.y, resumoBox.width, resumoBox.height, 'F');
+        doc.setDrawColor(...primaryColor);
+        doc.setLineWidth(2);
+        doc.rect(resumoBox.x, resumoBox.y, resumoBox.width, resumoBox.height);
+        
+        // Linhas do resumo
+        const qtdTotal = controle.qtd_pequena + controle.qtd_media + controle.qtd_grande;
+        doc.setTextColor(...textColor);
+        doc.setFontSize(12);
         doc.setFont('helvetica', 'normal');
         
-        const qtdTotal = controle.qtd_pequena + controle.qtd_media + controle.qtd_grande;
-        doc.text(`Total de Marmitas: ${qtdTotal} unidades`, margin + 15, currentY + 20);
-        doc.text(`Valor das Marmitas: R$ ${valorMarmitas.toFixed(2)}`, margin + 15, currentY + 32);
+        doc.text(`Total de Marmitas: ${qtdTotal} unidades`, resumoBox.x + 20, resumoBox.y + 20);
+        doc.text(`Valor das Marmitas: R$ ${valorMarmitas.toFixed(2).replace('.', ',')}`, resumoBox.x + 20, resumoBox.y + 35);
         
         if (valorExtras > 0) {
-            doc.text(`Valor dos Extras: R$ ${valorExtras.toFixed(2)}`, margin + 15, currentY + 44);
+            doc.text(`Valor dos Extras: R$ ${valorExtras.toFixed(2).replace('.', ',')}`, resumoBox.x + 20, resumoBox.y + 50);
         }
         
         // Total geral destacado
         doc.setFillColor(...primaryColor);
-        doc.rect(margin + 15, currentY + 50, pageWidth - 2 * margin - 30, 18, 'F');
+        doc.rect(resumoBox.x + 20, resumoBox.y + 60, resumoBox.width - 40, 15, 'F');
         doc.setTextColor(...secondaryColor);
-        doc.setFontSize(16);
+        doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
-        doc.text(`VALOR TOTAL: R$ ${controle.valor_total.toFixed(2)}`, margin + 20, currentY + 62);
+        doc.text(`VALOR TOTAL: R$ ${controle.valor_total.toFixed(2).replace('.', ',')}`, resumoBox.x + 30, resumoBox.y + 72);
         
-        currentY += 90;
+        currentY += 100;
         
         // OBSERVAÇÕES (se houver)
         if (controle.observacoes && controle.observacoes.trim()) {
-            if (currentY > pageHeight - 100) {
+            if (currentY > pageHeight - 120) {
                 doc.addPage();
                 currentY = margin;
             }
             
-            doc.setTextColor(...textColor);
-            doc.setFontSize(18);
-            doc.setFont('helvetica', 'bold');
-            doc.text('OBSERVAÇÕES', margin, currentY);
+            addSectionHeader(doc, 'OBSERVAÇÕES', currentY, pageWidth, margin, primaryColor, secondaryColor);
             currentY += 20;
             
-            doc.setFontSize(12);
+            doc.setTextColor(...textColor);
+            doc.setFontSize(11);
             doc.setFont('helvetica', 'normal');
             const observacoes = doc.splitTextToSize(controle.observacoes, pageWidth - 2 * margin);
             doc.text(observacoes, margin, currentY);
-            currentY += observacoes.length * 7 + 25;
+            currentY += observacoes.length * 6 + 20;
         }
         
-        // ASSINATURA
-        if (currentY > pageHeight - 80) {
+        // ASSINATURAS PROFISSIONAIS
+        if (currentY > pageHeight - 100) {
             doc.addPage();
             currentY = margin;
         }
         
-        doc.setTextColor(...textColor);
-        doc.setFontSize(18);
-        doc.setFont('helvetica', 'bold');
-        doc.text('ASSINATURAS', margin, currentY);
-        currentY += 35;
+        addSectionHeader(doc, 'ASSINATURAS', currentY, pageWidth, margin, primaryColor, secondaryColor);
+        currentY += 40;
         
-        // Campos de assinatura
         const assinaturaWidth = (pageWidth - 3 * margin) / 2;
         
-        // Unaí Marmitas
-        doc.setDrawColor(...secondaryColor);
-        doc.setLineWidth(2);
-        doc.line(margin, currentY, margin + assinaturaWidth, currentY);
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Unaí Marmitas', margin, currentY + 12);
-        doc.setFont('helvetica', 'normal');
-        doc.text('Responsável', margin, currentY + 22);
+        // Campos de assinatura estilizados
+        drawSignatureField(doc, margin, currentY, assinaturaWidth, 'Unaí Marmitas', 'Responsável Comercial', primaryColor, secondaryColor);
+        drawSignatureField(doc, margin + assinaturaWidth + margin, currentY, assinaturaWidth, empresa.nome, 'Responsável da Empresa', primaryColor, secondaryColor);
         
-        // Empresa
-        const empresaX = margin + assinaturaWidth + margin;
-        doc.line(empresaX, currentY, empresaX + assinaturaWidth, currentY);
-        doc.setFont('helvetica', 'bold');
-        doc.text(empresa.nome, empresaX, currentY + 12);
-        doc.setFont('helvetica', 'normal');
-        doc.text('Responsável', empresaX, currentY + 22);
+        // FOOTER PROFISSIONAL
+        addProfessionalFooter(doc, pageWidth, pageHeight, primaryColor, secondaryColor);
         
-        // FOOTER com tema
-        doc.setFillColor(...primaryColor);
-        doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
-        doc.setFontSize(8);
-        doc.setTextColor(...secondaryColor);
-        doc.setFont('helvetica', 'bold');
-        doc.text('UNAÍ MARMITAS - Sabor que alimenta, qualidade que conquista', 
-            pageWidth / 2, pageHeight - 8, { align: 'center' });
-    
-    // Salvar PDF
-    const nomeArquivo = `Relatorio_${empresa.nome.replace(/[^a-zA-Z0-9]/g, '_')}_${currentMonth}.pdf`;
-    doc.save(nomeArquivo);
-    
-    showNotification('PDF gerado com sucesso!', 'success');
-    
-} catch (error) {
-    console.error('Erro ao gerar PDF:', error);
-    showNotification('Erro ao gerar PDF. Tente novamente.', 'error');
+        // Salvar PDF
+        const nomeArquivo = `Relatorio_${empresa.nome.replace(/[^a-zA-Z0-9]/g, '_')}_${currentMonth}.pdf`;
+        doc.save(nomeArquivo);
+        
+        showNotification('PDF profissional gerado com sucesso!', 'success');
+        
+    } catch (error) {
+        console.error('Erro ao gerar PDF:', error);
+        showNotification('Erro ao gerar PDF. Tente novamente.', 'error');
+    }
 }
+
+// Desenhar logo customizado
+function drawCustomLogo(doc, x, y, width, height) {
+    // Background do logo
+    doc.setFillColor(26, 26, 26);
+    doc.roundedRect(x, y, width, height, 8, 8, 'F');
+    
+    // Borda dourada
+    doc.setDrawColor(255, 215, 0);
+    doc.setLineWidth(3);
+    doc.roundedRect(x, y, width, height, 8, 8);
+    
+    // Ícone central estilizado
+    doc.setTextColor(255, 215, 0);
+    doc.setFontSize(32);
+    doc.setFont('helvetica', 'bold');
+    doc.text('🍽️', x + width/2 - 8, y + height/2 + 5);
+    
+    // Texto do logo
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('UNAÍ', x + width/2, y + height - 8, { align: 'center' });
+    doc.setFontSize(8);
+    doc.text('MARMITAS', x + width/2, y + height - 2, { align: 'center' });
+}
+
+// Adicionar cabeçalho de seção profissional
+function addSectionHeader(doc, title, y, pageWidth, margin, primaryColor, secondaryColor) {
+    // Linha decorativa
+    doc.setDrawColor(...primaryColor);
+    doc.setLineWidth(3);
+    doc.line(margin, y, pageWidth - margin, y);
+    
+    // Título
+    doc.setTextColor(...secondaryColor);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text(title, margin, y + 10);
+    
+    // Linha inferior
+    doc.setLineWidth(1);
+    doc.line(margin, y + 12, pageWidth - margin, y + 12);
+}
+
+// Desenhar tabela profissional
+function drawProfessionalTable(doc, data, x, y, width, primaryColor, secondaryColor) {
+    const rowHeight = 15;
+    const colWidth = width / data[0].length;
+    
+    data.forEach((row, rowIndex) => {
+        row.forEach((cell, colIndex) => {
+            const cellX = x + (colIndex * colWidth);
+            const cellY = y + (rowIndex * rowHeight);
+            
+            // Header da tabela
+            if (rowIndex === 0) {
+                doc.setFillColor(...primaryColor);
+                doc.rect(cellX, cellY, colWidth, rowHeight, 'F');
+                doc.setTextColor(...secondaryColor);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(11);
+            } else {
+                // Linhas alternadas
+                if (rowIndex % 2 === 0) {
+                    doc.setFillColor(248, 249, 250);
+                    doc.rect(cellX, cellY, colWidth, rowHeight, 'F');
+                } else {
+                    doc.setFillColor(255, 255, 255);
+                    doc.rect(cellX, cellY, colWidth, rowHeight, 'F');
+                }
+                doc.setTextColor(51, 51, 51);
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(10);
+            }
+            
+            // Bordas elegantes
+            doc.setDrawColor(...primaryColor);
+            doc.setLineWidth(0.5);
+            doc.rect(cellX, cellY, colWidth, rowHeight);
+            
+            // Texto centralizado
+            doc.text(cell, cellX + colWidth/2, cellY + 10, { align: 'center' });
+        });
+    });
+}
+
+// Processar extras para PDF
+function processarExtrasParaPDF(lancamentosDiarios) {
+    try {
+        const lancamentos = JSON.parse(lancamentosDiarios);
+        const todosExtras = [];
+        
+        lancamentos.forEach(lancamento => {
+            if (lancamento.extras && lancamento.extras.length > 0) {
+                lancamento.extras.forEach(extra => {
+                    const existente = todosExtras.find(e => e.descricao === extra.descricao);
+                    if (existente) {
+                        existente.quantidade += extra.quantidade;
+                        existente.total += extra.total;
+                    } else {
+                        todosExtras.push({
+                            descricao: extra.descricao,
+                            quantidade: extra.quantidade,
+                            valor_unitario: extra.valor_unitario,
+                            total: extra.total
+                        });
+                    }
+                });
+            }
+        });
+        
+        return todosExtras;
+    } catch (error) {
+        console.error('Erro ao processar extras:', error);
+        return [];
+    }
+}
+
+// Desenhar campo de assinatura profissional
+function drawSignatureField(doc, x, y, width, nome, cargo, primaryColor, secondaryColor) {
+    // Linha da assinatura
+    doc.setDrawColor(...secondaryColor);
+    doc.setLineWidth(1);
+    doc.line(x, y, x + width, y);
+    
+    // Nome
+    doc.setTextColor(...secondaryColor);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(nome, x, y + 12);
+    
+    // Cargo
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(cargo, x, y + 22);
+    
+    // Data
+    doc.setFontSize(9);
+    doc.text(`Data: ___/___/______`, x, y + 32);
+}
+
+// Adicionar rodapé profissional
+function addProfessionalFooter(doc, pageWidth, pageHeight, primaryColor, secondaryColor) {
+    const footerY = pageHeight - 20;
+    
+    // Linha superior do rodapé
+    doc.setDrawColor(...primaryColor);
+    doc.setLineWidth(2);
+    doc.line(0, footerY - 5, pageWidth, footerY - 5);
+    
+    // Background do rodapé
+    doc.setFillColor(...primaryColor);
+    doc.rect(0, footerY - 5, pageWidth, 20, 'F');
+    
+    // Texto do rodapé
+    doc.setTextColor(...secondaryColor);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('UNAÍ MARMITAS', 20, footerY + 5);
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text('Sabor que alimenta, qualidade que conquista', 20, footerY + 12);
+    
+    // Informações de contato no rodapé
+    doc.text('www.unaimarmitas.com • contato@unaimarmitas.com • (38) 99999-9999', 
+        pageWidth - 20, footerY + 8, { align: 'right' });
+    
+    // Número da página
+    doc.setFontSize(8);
+    doc.text('Página 1', pageWidth / 2, footerY + 8, { align: 'center' });
 }
 
 // Função auxiliar para desenhar tabelas estilizadas
@@ -782,6 +950,12 @@ function setupEventListeners() {
         });
     });
 
+    
+    // Botão Lançamentos
+    document.getElementById('btnLancamentos').addEventListener('click', function() {
+        showPaginaLancamentos();
+    });
+
     // Botão Nova Empresa
     document.getElementById('btnNovaEmpresa').addEventListener('click', function() {
         showEmpresaModal();
@@ -825,103 +999,108 @@ function editarEmpresa(empresaId) {
 
 // ADICIONAR ESTAS FUNÇÕES LOGO APÓS A LINHA ACIMA:
 
-// Modal para lançamento de marmitas
-function showLancamentoModal(empresaId) {
-    const empresa = empresas.find(e => e.id === empresaId);
-    const controle = controles.find(c => c.empresa_id === empresaId);
-    
-    if (!empresa) {
-        showNotification('Empresa não encontrada!', 'error');
-        return;
-    }
-    
-    const modalHTML = `
-        <div class="modal-overlay" id="lancamentoModal">
-            <div class="modal-content modal-extra-large">
-                <div class="modal-header">
-                    <h2>${empresa.nome} - ${getCurrentMonthText()}</h2>
-                    <button class="modal-close" onclick="closeLancamentoModal()">&times;</button>
-                </div>
-                
-                <form id="lancamentoForm" class="modal-form">
-                    <!-- Seção de Lançamentos Diários -->
-                    <div class="lancamentos-section">
-                        <div class="section-header">
-                            <h3>📅 Lançamentos Diários</h3>
-                            <button type="button" class="btn btn-secondary btn-small" onclick="adicionarLancamento()">
-                                <i class="fas fa-plus"></i> Adicionar Dia
+const modalHTML = `
+    <div class="modal-overlay" id="lancamentoModal">
+        <div class="modal-content modal-extra-large">
+            <div class="modal-header">
+                <h2>🏢 ${empresa.nome} - ${getCurrentMonthText()}</h2>
+                <button class="modal-close" onclick="closeLancamentoModal()">&times;</button>
+            </div>
+            
+            <div class="modal-form">
+                <div class="modal-grid">
+                    <!-- CONTEÚDO PRINCIPAL -->
+                    <div class="modal-main-content">
+                        <!-- Seção de Lançamentos Diários -->
+                        <div class="lancamentos-section">
+                            <div class="section-header">
+                                <h3>📅 Lançamentos Diários</h3>
+                                <button type="button" class="btn btn-secondary btn-small" onclick="adicionarLancamento()">
+                                    <i class="fas fa-plus"></i> Adicionar Dia
+                                </button>
+                            </div>
+                            
+                            <div id="lancamentosList" class="lancamentos-list">
+                                ${renderLancamentosExistentes(controle)}
+                            </div>
+                        </div>
+                        
+                        <div class="section-divider"></div>
+                        
+                        <!-- Observações -->
+                        <div class="config-section">
+                            <h3>📝 Observações</h3>
+                            <div class="form-group">
+                                <textarea id="observacoes_lancamento" rows="4" placeholder="Observações sobre este lançamento...">${controle ? controle.observacoes || '' : ''}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- SIDEBAR COM RESUMO E AÇÕES -->
+                    <div class="modal-sidebar">
+                        <!-- Ações Rápidas -->
+                        <div class="quick-actions-grid">
+                            <div class="action-card" onclick="gerarTemplate(${empresaId})">
+                                <i class="fas fa-envelope"></i>
+                                <span>Template Email</span>
+                            </div>
+                            <div class="action-card" onclick="gerarPDF(${empresaId})">
+                                <i class="fas fa-file-pdf"></i>
+                                <span>Gerar PDF</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Resumo Total -->
+                        <div class="resumo-section">
+                            <h3>📊 Resumo do Mês</h3>
+                            <div class="resumo-grid" style="grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <div class="resumo-item">
+                                    <label>Pequenas:</label>
+                                    <span id="total_pequenas">0</span>
+                                </div>
+                                <div class="resumo-item">
+                                    <label>Médias:</label>
+                                    <span id="total_medias">0</span>
+                                </div>
+                                <div class="resumo-item">
+                                    <label>Grandes:</label>
+                                    <span id="total_grandes">0</span>
+                                </div>
+                                <div class="resumo-item total">
+                                    <label>Valor Total:</label>
+                                    <span id="valor_total_mes">R$ 0,00</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Status -->
+                        <div class="status-section">
+                            <h3>📈 Status Atual</h3>
+                            <div class="status-badge ${controle ? controle.status : 'pendente'}" style="display: block; text-align: center; margin-bottom: 15px;">
+                                ${getStatusText(controle ? controle.status : 'pendente')}
+                            </div>
+                            
+                            <div class="status-controls">
+                                <h4>Alterar Status:</h4>
+                                ${createStatusButtons(controle ? controle.status : 'pendente')}
+                            </div>
+                        </div>
+                        
+                        <!-- Botões de Ação -->
+                        <div class="modal-actions" style="border-top: none; padding-top: 0; margin-top: 25px;">
+                            <button type="button" class="btn btn-secondary" onclick="closeLancamentoModal()">
+                                <i class="fas fa-times"></i> Fechar
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="salvarLancamento(${empresaId})">
+                                <i class="fas fa-save"></i> Salvar
                             </button>
                         </div>
-                        
-                        <div id="lancamentosList" class="lancamentos-list">
-                            ${renderLancamentosExistentes(controle)}
-                        </div>
                     </div>
-                    
-                    <!-- Resumo Total -->
-                    <div class="resumo-section">
-                        <h3>📊 Resumo Total do Mês</h3>
-                        <div class="resumo-grid">
-                            <div class="resumo-item">
-                                <label>Total Pequenas:</label>
-                                <span id="total_pequenas">0</span>
-                            </div>
-                            <div class="resumo-item">
-                                <label>Total Médias:</label>
-                                <span id="total_medias">0</span>
-                            </div>
-                            <div class="resumo-item">
-                                <label>Total Grandes:</label>
-                                <span id="total_grandes">0</span>
-                            </div>
-                            <div class="resumo-item total">
-                                <label>Valor Total:</label>
-                                <span id="valor_total_mes">R$ 0,00</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Status -->
-                    <div class="status-section">
-                        <h3>Status Atual: <span class="status-badge ${controle ? controle.status : 'pendente'}">${getStatusText(controle ? controle.status : 'pendente')}</span></h3>
-                        
-                        <div class="status-controls">
-                            <h4>Controle de Status:</h4>
-                            ${createStatusButtons(controle ? controle.status : 'pendente')}
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="observacoes_lancamento">Observações:</label>
-                        <textarea id="observacoes_lancamento" rows="3" placeholder="Observações sobre este lançamento...">${controle ? controle.observacoes || '' : ''}</textarea>
-                    </div>
-                    
-                    <div class="modal-actions">
-                        <button type="button" class="btn btn-secondary" onclick="gerarTemplate(${empresaId})">
-                            📧 Gerar Template
-                        </button>
-                        <button type="button" class="btn btn-success" onclick="gerarPDF(${empresaId})">
-                            📄 Gerar PDF
-                        </button>
-                        <button type="button" class="btn btn-secondary" onclick="closeLancamentoModal()">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Salvar</button>
-                    </div>
-                </form>
+                </div>
             </div>
         </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
-    // Calcular totais iniciais
-    calcularTotaisMes();
-    
-    // Event listener para o formulário
-    document.getElementById('lancamentoForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        await saveLancamento(empresaId);
-    });
-}
+    </div>
+`;
 
 // Renderizar lançamentos existentes
 function renderLancamentosExistentes(controle) {
@@ -943,11 +1122,14 @@ function createLancamentoRow(lancamento = {}, index = 0) {
     const hoje = new Date().toISOString().split('T')[0];
     const extras = lancamento.extras || [];
     
+    // CORREÇÃO: Criar ID único para cada lançamento
+    const uniqueId = `lancamento_${Date.now()}_${index}`;
+    
     return `
-        <div class="lancamento-row" data-index="${index}">
+        <div class="lancamento-row" data-index="${index}" data-unique-id="${uniqueId}">
             <div class="lancamento-header">
                 <input type="date" class="data-input" value="${lancamento.data || hoje}" onchange="calcularTotaisMes()">
-                <button type="button" class="btn-remove" onclick="removerLancamento(${index})" title="Remover este dia">
+                <button type="button" class="btn-remove" onclick="removerLancamento('${uniqueId}')" title="Remover este dia">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
@@ -958,21 +1140,21 @@ function createLancamentoRow(lancamento = {}, index = 0) {
                 <div class="quantidades-grid">
                     <div class="quantidade-item">
                         <label>Pequena (P)</label>
-                        <input type="number" class="qtd-input qtd-p" min="0" value="${lancamento.qtd_pequena || 0}" 
+                        <input type="number" class="qtd-input qtd-p" min="0" value="${lancamento.qtd_pequena || ''}" 
                                onchange="calcularTotaisMes()" placeholder="0">
                         <span class="preco">R$ ${precos.P.toFixed(2)}</span>
                     </div>
                     
                     <div class="quantidade-item">
                         <label>Média (M)</label>
-                        <input type="number" class="qtd-input qtd-m" min="0" value="${lancamento.qtd_media || 0}" 
+                        <input type="number" class="qtd-input qtd-m" min="0" value="${lancamento.qtd_media || ''}" 
                                onchange="calcularTotaisMes()" placeholder="0">
                         <span class="preco">R$ ${precos.M.toFixed(2)}</span>
                     </div>
                     
                     <div class="quantidade-item">
                         <label>Grande (G)</label>
-                        <input type="number" class="qtd-input qtd-g" min="0" value="${lancamento.qtd_grande || 0}" 
+                        <input type="number" class="qtd-input qtd-g" min="0" value="${lancamento.qtd_grande || ''}" 
                                onchange="calcularTotaisMes()" placeholder="0">
                         <span class="preco">R$ ${precos.G.toFixed(2)}</span>
                     </div>
@@ -983,13 +1165,13 @@ function createLancamentoRow(lancamento = {}, index = 0) {
             <div class="extras-section">
                 <div class="extras-header">
                     <h4>🥤 Itens Extras</h4>
-                    <button type="button" class="btn btn-secondary btn-small" onclick="adicionarExtra(${index})">
+                    <button type="button" class="btn btn-secondary btn-small" onclick="adicionarExtra('${uniqueId}')">
                         <i class="fas fa-plus"></i> Adicionar Item
                     </button>
                 </div>
                 
-                <div class="extras-list" id="extrasList_${index}">
-                    ${extras.map((extra, extraIndex) => createExtraRow(index, extraIndex, extra)).join('')}
+                <div class="extras-list" id="extrasList_${uniqueId}">
+                    ${extras.map((extra, extraIndex) => createExtraRow(uniqueId, extraIndex, extra)).join('')}
                     ${extras.length === 0 ? '<p class="no-extras">Nenhum item extra adicionado.</p>' : ''}
                 </div>
             </div>
@@ -1006,9 +1188,11 @@ function createLancamentoRow(lancamento = {}, index = 0) {
 }
 
 // Criar linha de item extra
-function createExtraRow(lancamentoIndex, extraIndex, extra = {}) {
+function createExtraRow(lancamentoId, extraIndex, extra = {}) {
+    const uniqueExtraId = `extra_${Date.now()}_${extraIndex}`;
+    
     return `
-        <div class="extra-row" data-lancamento="${lancamentoIndex}" data-extra="${extraIndex}">
+        <div class="extra-row" data-lancamento="${lancamentoId}" data-extra="${extraIndex}" data-extra-id="${uniqueExtraId}">
             <input type="text" class="extra-descricao" placeholder="Ex: Coca-Cola, Água, etc." 
                    value="${extra.descricao || ''}" onchange="calcularTotaisMes()">
             <input type="number" class="extra-quantidade" min="1" placeholder="Qtd" 
@@ -1016,7 +1200,7 @@ function createExtraRow(lancamentoIndex, extraIndex, extra = {}) {
             <input type="number" class="extra-valor" step="0.01" min="0" placeholder="Valor unit." 
                    value="${extra.valor_unitario || ''}" onchange="calcularTotaisMes()">
             <span class="extra-total">R$ 0,00</span>
-            <button type="button" class="btn-remove-extra" onclick="removerExtra(${lancamentoIndex}, ${extraIndex})" title="Remover item">
+            <button type="button" class="btn-remove-extra" onclick="removerExtra('${uniqueExtraId}')" title="Remover item">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -1024,8 +1208,8 @@ function createExtraRow(lancamentoIndex, extraIndex, extra = {}) {
 }
 
 // Adicionar item extra
-function adicionarExtra(lancamentoIndex) {
-    const extrasList = document.getElementById(`extrasList_${lancamentoIndex}`);
+function adicionarExtra(lancamentoId) {
+    const extrasList = document.getElementById(`extrasList_${lancamentoId}`);
     const noExtras = extrasList.querySelector('.no-extras');
     
     if (noExtras) {
@@ -1033,21 +1217,32 @@ function adicionarExtra(lancamentoIndex) {
     }
     
     const extraIndex = extrasList.querySelectorAll('.extra-row').length;
-    const novoExtra = createExtraRow(lancamentoIndex, extraIndex);
+    const novoExtra = createExtraRow(lancamentoId, extraIndex);
     
     extrasList.insertAdjacentHTML('beforeend', novoExtra);
+    
+    // Focar no campo descrição do novo extra
+    setTimeout(() => {
+        const novoExtraRow = extrasList.lastElementChild;
+        const descricaoInput = novoExtraRow.querySelector('.extra-descricao');
+        if (descricaoInput) {
+            descricaoInput.focus();
+        }
+    }, 100);
+    
     calcularTotaisMes();
 }
 
 // Remover item extra
-function removerExtra(lancamentoIndex, extraIndex) {
-    const extraRow = document.querySelector(`[data-lancamento="${lancamentoIndex}"][data-extra="${extraIndex}"]`);
+function removerExtra(uniqueExtraId) {
+    const extraRow = document.querySelector(`[data-extra-id="${uniqueExtraId}"]`);
     if (extraRow) {
+        const lancamentoId = extraRow.dataset.lancamento;
         extraRow.remove();
         calcularTotaisMes();
         
         // Se não sobrou nenhum extra, mostrar mensagem
-        const extrasList = document.getElementById(`extrasList_${lancamentoIndex}`);
+        const extrasList = document.getElementById(`extrasList_${lancamentoId}`);
         if (extrasList.querySelectorAll('.extra-row').length === 0) {
             extrasList.innerHTML = '<p class="no-extras">Nenhum item extra adicionado.</p>';
         }
@@ -1063,24 +1258,37 @@ function adicionarLancamento() {
         noLancamentos.remove();
     }
     
+    // CORREÇÃO: Sempre criar um lançamento VAZIO para novo dia
     const index = lista.children.length;
     const novoLancamento = createLancamentoRow({}, index);
     
     lista.insertAdjacentHTML('beforeend', novoLancamento);
+    
+    // Focar no campo de data do novo lançamento
+    setTimeout(() => {
+        const novoRow = lista.lastElementChild;
+        const dataInput = novoRow.querySelector('.data-input');
+        if (dataInput) {
+            dataInput.focus();
+        }
+    }, 100);
+    
     calcularTotaisMes();
 }
 
 // Remover lançamento
-function removerLancamento(index) {
-    const row = document.querySelector(`[data-index="${index}"]`);
+function removerLancamento(uniqueId) {
+    const row = document.querySelector(`[data-unique-id="${uniqueId}"]`);
     if (row) {
-        row.remove();
-        calcularTotaisMes();
-        
-        // Se não sobrou nenhum lançamento, mostrar mensagem
-        const lista = document.getElementById('lancamentosList');
-        if (lista.children.length === 0) {
-            lista.innerHTML = '<p class="no-lancamentos">Nenhum lançamento ainda. Clique em "Adicionar Dia" para começar.</p>';
+        if (confirm('Tem certeza que deseja remover este lançamento do dia?')) {
+            row.remove();
+            calcularTotaisMes();
+            
+            // Se não sobrou nenhum lançamento, mostrar mensagem
+            const lista = document.getElementById('lancamentosList');
+            if (lista.children.length === 0) {
+                lista.innerHTML = '<p class="no-lancamentos">Nenhum lançamento ainda. Clique em "Adicionar Dia" para começar.</p>';
+            }
         }
     }
 }
@@ -2281,4 +2489,613 @@ async function initializePeriods() {
         const selectMes = document.getElementById('selectMes');
         selectMes.innerHTML = `<option value="${currentMonth}">${getCurrentMonthText()}</option>`;
     }
+}
+
+// Modal de lançamento rápido
+function modalLancamentoRapido(empresaId) {
+    const empresa = empresas.find(e => e.id === empresaId);
+    if (!empresa) {
+        showNotification('Empresa não encontrada!', 'error');
+        return;
+    }
+    
+    const hoje = new Date().toISOString().split('T')[0];
+    
+    const modalHTML = `
+        <div class="modal-overlay" id="modalRapido">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🍽️ Lançamento Rápido - ${empresa.nome}</h2>
+                    <button class="modal-close" onclick="closeModalRapido()">&times;</button>
+                </div>
+                
+                <form id="formRapido" class="modal-form">
+                    <div class="form-group">
+                        <label for="data_rapido">📅 Data:</label>
+                        <input type="date" id="data_rapido" value="${hoje}" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>🍽️ Marmitas:</label>
+                        <div class="quantidades-grid">
+                            <div class="quantidade-item">
+                                <label>Pequena (P)</label>
+                                <input type="number" id="qtd_p_rapido" class="qtd-input" min="0" value="0" 
+                                       onchange="calcularTotalRapido()" placeholder="0">
+                                <span class="preco">R$ ${precos.P.toFixed(2)}</span>
+                            </div>
+                            
+                            <div class="quantidade-item">
+                                <label>Média (M)</label>
+                                <input type="number" id="qtd_m_rapido" class="qtd-input" min="0" value="0" 
+                                       onchange="calcularTotalRapido()" placeholder="0">
+                                <span class="preco">R$ ${precos.M.toFixed(2)}</span>
+                            </div>
+                            
+                            <div class="quantidade-item">
+                                <label>Grande (G)</label>
+                                <input type="number" id="qtd_g_rapido" class="qtd-input" min="0" value="0" 
+                                       onchange="calcularTotalRapido()" placeholder="0">
+                                <span class="preco">R$ ${precos.G.toFixed(2)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>🥤 Itens Extras (Opcional):</label>
+                        <div id="extrasRapidoList">
+                            <div class="extra-row-simples">
+                                <input type="text" class="extra-desc" placeholder="Ex: Coca-Cola" onchange="calcularTotalRapido()">
+                                <input type="number" class="extra-qtd" min="1" value="1" onchange="calcularTotalRapido()" placeholder="Qtd">
+                                <input type="number" class="extra-valor" step="0.01" min="0" onchange="calcularTotalRapido()" placeholder="Valor">
+                                <button type="button" class="btn-add-extra" onclick="adicionarExtraRapido()">+</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="total-rapido">
+                            <label>💰 Total do Dia:</label>
+                            <span id="valorTotalRapido">R$ 0,00</span>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModalRapido()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Salvar Lançamento
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Event listener para o form
+    document.getElementById('formRapido').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        await salvarLancamentoRapido(empresaId);
+    });
+    
+    // Focar no primeiro campo de quantidade
+    setTimeout(() => {
+        document.getElementById('qtd_p_rapido').focus();
+    }, 100);
+}
+
+// Calcular total do modal rápido
+function calcularTotalRapido() {
+    const qtdP = parseInt(document.getElementById('qtd_p_rapido').value) || 0;
+    const qtdM = parseInt(document.getElementById('qtd_m_rapido').value) || 0;
+    const qtdG = parseInt(document.getElementById('qtd_g_rapido').value) || 0;
+    
+    let totalMarmitas = (qtdP * precos.P) + (qtdM * precos.M) + (qtdG * precos.G);
+    let totalExtras = 0;
+    
+    // Calcular extras
+    document.querySelectorAll('.extra-row-simples').forEach(row => {
+        const desc = row.querySelector('.extra-desc').value.trim();
+        const qtd = parseInt(row.querySelector('.extra-qtd').value) || 0;
+        const valor = parseFloat(row.querySelector('.extra-valor').value) || 0;
+        
+        if (desc && qtd > 0 && valor > 0) {
+            totalExtras += qtd * valor;
+        }
+    });
+    
+    const total = totalMarmitas + totalExtras;
+    document.getElementById('valorTotalRapido').textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
+}
+
+// Adicionar extra no modal rápido
+function adicionarExtraRapido() {
+    const container = document.getElementById('extrasRapidoList');
+    const novaLinha = `
+        <div class="extra-row-simples">
+            <input type="text" class="extra-desc" placeholder="Ex: Água" onchange="calcularTotalRapido()">
+            <input type="number" class="extra-qtd" min="1" value="1" onchange="calcularTotalRapido()" placeholder="Qtd">
+            <input type="number" class="extra-valor" step="0.01" min="0" onchange="calcularTotalRapido()" placeholder="Valor">
+            <button type="button" class="btn-remove-extra-rapido" onclick="removerExtraRapido(this)">−</button>
+        </div>
+    `;
+    container.insertAdjacentHTML('beforeend', novaLinha);
+}
+
+// Remover extra do modal rápido
+function removerExtraRapido(btn) {
+    btn.closest('.extra-row-simples').remove();
+    calcularTotalRapido();
+}
+
+// Salvar lançamento rápido
+async function salvarLancamentoRapido(empresaId) {
+    const data = document.getElementById('data_rapido').value;
+    const qtdP = parseInt(document.getElementById('qtd_p_rapido').value) || 0;
+    const qtdM = parseInt(document.getElementById('qtd_m_rapido').value) || 0;
+    const qtdG = parseInt(document.getElementById('qtd_g_rapido').value) || 0;
+    
+    if (!data) {
+        showNotification('Data é obrigatória!', 'error');
+        return;
+    }
+    
+    if (qtdP === 0 && qtdM === 0 && qtdG === 0) {
+        showNotification('Informe pelo menos uma quantidade de marmita!', 'error');
+        return;
+    }
+    
+    // Coletar extras
+    const extras = [];
+    document.querySelectorAll('.extra-row-simples').forEach(row => {
+        const desc = row.querySelector('.extra-desc').value.trim();
+        const qtd = parseInt(row.querySelector('.extra-qtd').value) || 0;
+        const valor = parseFloat(row.querySelector('.extra-valor').value) || 0;
+        
+        if (desc && qtd > 0 && valor > 0) {
+            extras.push({
+                descricao: desc,
+                quantidade: qtd,
+                valor_unitario: valor,
+                total: qtd * valor
+            });
+        }
+    });
+    
+    const valorMarmitas = (qtdP * precos.P) + (qtdM * precos.M) + (qtdG * precos.G);
+    const valorExtras = extras.reduce((sum, extra) => sum + extra.total, 0);
+    const valorTotal = valorMarmitas + valorExtras;
+    
+    // Criar objeto do lançamento do dia
+    const lancamentoDia = {
+        data: data,
+        qtd_pequena: qtdP,
+        qtd_media: qtdM,
+        qtd_grande: qtdG,
+        valor_marmitas: valorMarmitas,
+        extras: extras,
+        valor_extras: valorExtras,
+        valor_dia: valorTotal
+    };
+    
+    try {
+        // Buscar controle existente ou criar novo
+        let controle = controles.find(c => c.empresa_id === empresaId);
+        let lancamentosExistentes = [];
+        
+        if (controle && controle.lancamentos_diarios) {
+            lancamentosExistentes = JSON.parse(controle.lancamentos_diarios);
+        }
+        
+        // Verificar se já existe lançamento nesta data
+        const indiceExistente = lancamentosExistentes.findIndex(l => l.data === data);
+        
+        if (indiceExistente >= 0) {
+            if (confirm(`Já existe um lançamento para o dia ${data}. Deseja substituir?`)) {
+                lancamentosExistentes[indiceExistente] = lancamentoDia;
+            } else {
+                return;
+            }
+        } else {
+            lancamentosExistentes.push(lancamentoDia);
+        }
+        
+        // Recalcular totais
+        const novoTotalP = lancamentosExistentes.reduce((sum, l) => sum + l.qtd_pequena, 0);
+        const novoTotalM = lancamentosExistentes.reduce((sum, l) => sum + l.qtd_media, 0);
+        const novoTotalG = lancamentosExistentes.reduce((sum, l) => sum + l.qtd_grande, 0);
+        const novoValorTotal = lancamentosExistentes.reduce((sum, l) => sum + l.valor_dia, 0);
+        
+        const dadosControle = {
+            empresa_id: empresaId,
+            mes_ano: currentMonth,
+            qtd_pequena: novoTotalP,
+            qtd_media: novoTotalM,
+            qtd_grande: novoTotalG,
+            valor_total: novoValorTotal,
+            status: controle ? controle.status : 'relatorio-enviado',
+            observacoes: controle ? controle.observacoes : '',
+            lancamentos_diarios: JSON.stringify(lancamentosExistentes)
+        };
+        
+        if (controle) {
+            await Database.updateControle(controle.id, dadosControle);
+        } else {
+            await Database.createControle(dadosControle);
+        }
+        
+        closeModalRapido();
+        await loadData();
+        renderDashboard();
+        
+        showNotification(`Lançamento do dia ${data} salvo com sucesso!`, 'success');
+        
+    } catch (error) {
+        console.error('Erro ao salvar lançamento:', error);
+        showNotification('Erro ao salvar lançamento.', 'error');
+    }
+}
+
+// Fechar modal rápido
+function closeModalRapido() {
+    const modal = document.getElementById('modalRapido');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// Página dedicada de lançamentos
+function showPaginaLancamentos() {
+    const paginaHTML = `
+        <div class="modal-overlay" id="paginaLancamentos">
+            <div class="modal-content modal-full-screen">
+                <div class="modal-header">
+                    <h2>📅 Gerenciamento de Lançamentos - ${getCurrentMonthText()}</h2>
+                    <button class="modal-close" onclick="closePaginaLancamentos()">&times;</button>
+                </div>
+                
+                <div class="pagina-lancamentos-content">
+                    <!-- Filtros Superiores -->
+                    <div class="filtros-lancamentos">
+                        <div class="filtro-empresa">
+                            <label>🏢 Empresa:</label>
+                            <select id="filtroEmpresa" onchange="filtrarLancamentos()">
+                                <option value="">Todas as empresas</option>
+                                ${empresas.map(emp => `<option value="${emp.id}">${emp.nome}</option>`).join('')}
+                            </select>
+                        </div>
+                        
+                        <div class="filtro-data">
+                            <label>📅 Período:</label>
+                            <input type="date" id="dataInicio" onchange="filtrarLancamentos()">
+                            <span>até</span>
+                            <input type="date" id="dataFim" onchange="filtrarLancamentos()">
+                        </div>
+                        
+                        <div class="acoes-rapidas">
+                            <button class="btn btn-primary" onclick="novoLancamentoRapido()">
+                                <i class="fas fa-plus"></i> Novo Lançamento
+                            </button>
+                            <button class="btn btn-secondary" onclick="exportarLancamentos()">
+                                <i class="fas fa-download"></i> Exportar
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Grade de Lançamentos -->
+                    <div class="lancamentos-grid" id="lancamentosGrid">
+                        ${renderGridLancamentos()}
+                    </div>
+                    
+                    <!-- Resumo Geral -->
+                    <div class="resumo-geral">
+                        <h3>📊 Resumo Geral</h3>
+                        <div class="resumo-cards">
+                            <div class="resumo-card">
+                                <span class="resumo-label">Total de Dias</span>
+                                <span class="resumo-valor" id="totalDias">0</span>
+                            </div>
+                            <div class="resumo-card">
+                                <span class="resumo-label">Total Marmitas</span>
+                                <span class="resumo-valor" id="totalMarmitas">0</span>
+                            </div>
+                            <div class="resumo-card">
+                                <span class="resumo-label">Total Faturado</span>
+                                <span class="resumo-valor" id="totalFaturado">R$ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', paginaHTML);
+    
+    // Configurar datas padrão (primeiro e último dia do mês)
+    const [year, month] = currentMonth.split('-');
+    const primeiroDia = `${currentMonth}-01`;
+    const ultimoDia = `${currentMonth}-${new Date(year, month, 0).getDate()}`;
+    
+    document.getElementById('dataInicio').value = primeiroDia;
+    document.getElementById('dataFim').value = ultimoDia;
+    
+    // Calcular resumo inicial
+    calcularResumoGeral();
+}
+
+// Renderizar grid de lançamentos
+function renderGridLancamentos() {
+    let todosLancamentos = [];
+    
+    // Coletar todos os lançamentos de todas as empresas
+    controles.forEach(controle => {
+        if (controle.lancamentos_diarios) {
+            try {
+                const lancamentos = JSON.parse(controle.lancamentos_diarios);
+                const empresa = empresas.find(e => e.id === controle.empresa_id);
+                
+                lancamentos.forEach(lancamento => {
+                    todosLancamentos.push({
+                        ...lancamento,
+                        empresa_nome: empresa ? empresa.nome : 'Empresa não encontrada',
+                        empresa_id: controle.empresa_id,
+                        controle_id: controle.id
+                    });
+                });
+            } catch (error) {
+                console.error('Erro ao processar lançamentos:', error);
+            }
+        }
+    });
+    
+    // Ordenar por data (mais recente primeiro)
+    todosLancamentos.sort((a, b) => new Date(b.data) - new Date(a.data));
+    
+    if (todosLancamentos.length === 0) {
+        return '<div class="no-lancamentos-encontrados">📭 Nenhum lançamento encontrado para este período.</div>';
+    }
+    
+    return todosLancamentos.map(lancamento => `
+        <div class="lancamento-card" data-empresa="${lancamento.empresa_id}" data-data="${lancamento.data}">
+            <div class="lancamento-header">
+                <div class="lancamento-empresa">${lancamento.empresa_nome}</div>
+                <div class="lancamento-data">${formatarData(lancamento.data)}</div>
+            </div>
+            
+            <div class="lancamento-detalhes">
+                <div class="marmitas-resumo">
+                    <span>🍽️ P:${lancamento.qtd_pequena} M:${lancamento.qtd_media} G:${lancamento.qtd_grande}</span>
+                    <span class="total-marmitas">${lancamento.qtd_pequena + lancamento.qtd_media + lancamento.qtd_grande} marmitas</span>
+                </div>
+                
+                ${lancamento.extras && lancamento.extras.length > 0 ? `
+                    <div class="extras-resumo">
+                        <span>🥤 ${lancamento.extras.length} item(ns) extra(s)</span>
+                        <span class="valor-extras">R$ ${lancamento.valor_extras.toFixed(2)}</span>
+                    </div>
+                ` : ''}
+                
+                <div class="valor-total-lancamento">
+                    <strong>💰 R$ ${lancamento.valor_dia.toFixed(2)}</strong>
+                </div>
+            </div>
+            
+            <div class="lancamento-acoes">
+                <button class="btn btn-small btn-secondary" onclick="editarLancamentoDia(${lancamento.empresa_id}, '${lancamento.data}')">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-small btn-danger" onclick="excluirLancamentoDia(${lancamento.empresa_id}, '${lancamento.data}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Filtrar lançamentos
+function filtrarLancamentos() {
+    const empresaSelecionada = document.getElementById('filtroEmpresa').value;
+    const dataInicio = document.getElementById('dataInicio').value;
+    const dataFim = document.getElementById('dataFim').value;
+    
+    const cards = document.querySelectorAll('.lancamento-card');
+    
+    cards.forEach(card => {
+        const empresaId = card.dataset.empresa;
+        const dataLancamento = card.dataset.data;
+        
+        let mostrar = true;
+        
+        // Filtro por empresa
+        if (empresaSelecionada && empresaId !== empresaSelecionada) {
+            mostrar = false;
+        }
+        
+        // Filtro por data
+        if (dataInicio && dataLancamento < dataInicio) {
+            mostrar = false;
+        }
+        
+        if (dataFim && dataLancamento > dataFim) {
+            mostrar = false;
+        }
+        
+        card.style.display = mostrar ? 'block' : 'none';
+    });
+    
+    calcularResumoGeral();
+}
+
+// Calcular resumo geral
+function calcularResumoGeral() {
+    const cardsVisiveis = document.querySelectorAll('.lancamento-card:not([style*="display: none"])');
+    
+    let totalDias = 0;
+    let totalMarmitas = 0;
+    let totalFaturado = 0;
+    
+    cardsVisiveis.forEach(card => {
+        totalDias++;
+        
+        // Extrair dados do card (forma simples)
+        const textoMarmitas = card.querySelector('.total-marmitas').textContent;
+        const qtdMarmitas = parseInt(textoMarmitas.match(/\d+/)[0]) || 0;
+        
+        const textoValor = card.querySelector('.valor-total-lancamento strong').textContent;
+        const valor = parseFloat(textoValor.replace('💰 R$ ', '').replace(',', '.')) || 0;
+        
+        totalMarmitas += qtdMarmitas;
+        totalFaturado += valor;
+    });
+    
+    document.getElementById('totalDias').textContent = totalDias;
+    document.getElementById('totalMarmitas').textContent = totalMarmitas;
+    document.getElementById('totalFaturado').textContent = `R$ ${totalFaturado.toFixed(2).replace('.', ',')}`;
+}
+
+// Novo lançamento rápido (sem empresa pré-selecionada)
+function novoLancamentoRapido() {
+    if (empresas.length === 0) {
+        showNotification('Cadastre pelo menos uma empresa primeiro!', 'error');
+        return;
+    }
+    
+    const modalHTML = `
+        <div class="modal-overlay" id="modalNovoRapido">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🚀 Novo Lançamento Rápido</h2>
+                    <button class="modal-close" onclick="closeNovoLancamentoRapido()">&times;</button>
+                </div>
+                
+                <form id="formNovoRapido" class="modal-form">
+                    <div class="form-group">
+                        <label for="empresa_nova">🏢 Empresa:</label>
+                        <select id="empresa_nova" required>
+                            <option value="">Selecione a empresa</option>
+                            ${empresas.map(emp => `<option value="${emp.id}">${emp.nome}</option>`).join('')}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="data_nova">📅 Data:</label>
+                        <input type="date" id="data_nova" value="${new Date().toISOString().split('T')[0]}" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>🍽️ Marmitas:</label>
+                        <div class="quantidades-grid">
+                            <div class="quantidade-item">
+                                <label>Pequena (P)</label>
+                                <input type="number" id="qtd_p_nova" class="qtd-input" min="0" value="0" 
+                                       onchange="calcularTotalNovo()" placeholder="0">
+                                <span class="preco">R$ ${precos.P.toFixed(2)}</span>
+                            </div>
+                            
+                            <div class="quantidade-item">
+                                <label>Média (M)</label>
+                                <input type="number" id="qtd_m_nova" class="qtd-input" min="0" value="0" 
+                                       onchange="calcularTotalNovo()" placeholder="0">
+                                <span class="preco">R$ ${precos.M.toFixed(2)}</span>
+                            </div>
+                            
+                            <div class="quantidade-item">
+                                <label>Grande (G)</label>
+                                <input type="number" id="qtd_g_nova" class="qtd-input" min="0" value="0" 
+                                       onchange="calcularTotalNovo()" placeholder="0">
+                                <span class="preco">R$ ${precos.G.toFixed(2)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="total-rapido">
+                            <label>💰 Total:</label>
+                            <span id="valorTotalNovo">R$ 0,00</span>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeNovoLancamentoRapido()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Salvar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    document.getElementById('formNovoRapido').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        await salvarNovoLancamentoRapido();
+    });
+}
+
+// Funções auxiliares da página de lançamentos
+function formatarData(data) {
+    const [ano, mes, dia] = data.split('-');
+    return `${dia}/${mes}/${ano}`;
+}
+
+function calcularTotalNovo() {
+    const qtdP = parseInt(document.getElementById('qtd_p_nova').value) || 0;
+    const qtdM = parseInt(document.getElementById('qtd_m_nova').value) || 0;
+    const qtdG = parseInt(document.getElementById('qtd_g_nova').value) || 0;
+    
+    const total = (qtdP * precos.P) + (qtdM * precos.M) + (qtdG * precos.G);
+    document.getElementById('valorTotalNovo').textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
+}
+
+async function salvarNovoLancamentoRapido() {
+    const empresaId = parseInt(document.getElementById('empresa_nova').value);
+    const data = document.getElementById('data_nova').value;
+    const qtdP = parseInt(document.getElementById('qtd_p_nova').value) || 0;
+    const qtdM = parseInt(document.getElementById('qtd_m_nova').value) || 0;
+    const qtdG = parseInt(document.getElementById('qtd_g_nova').value) || 0;
+    
+    if (!empresaId || !data) {
+        showNotification('Empresa e data são obrigatórios!', 'error');
+        return;
+    }
+    
+    if (qtdP === 0 && qtdM === 0 && qtdG === 0) {
+        showNotification('Informe pelo menos uma quantidade!', 'error');
+        return;
+    }
+    
+    // Simular salvamento (usar a mesma lógica do modal rápido)
+    closeNovoLancamentoRapido();
+    await modalLancamentoRapido(empresaId);
+    
+    showNotification('Use o modal que abriu para completar o lançamento!', 'info');
+}
+
+function editarLancamentoDia(empresaId, data) {
+    closePaginaLancamentos();
+    modalLancamentoRapido(empresaId);
+}
+
+function excluirLancamentoDia(empresaId, data) {
+    if (confirm(`Confirma a exclusão do lançamento do dia ${formatarData(data)}?`)) {
+        showNotification('Funcionalidade de exclusão em desenvolvimento!', 'info');
+    }
+}
+
+function exportarLancamentos() {
+    showNotification('Exportação em desenvolvimento!', 'info');
+}
+
+function closeNovoLancamentoRapido() {
+    const modal = document.getElementById('modalNovoRapido');
+    if (modal) modal.remove();
+}
+
+function closePaginaLancamentos() {
+    const modal = document.getElementById('paginaLancamentos');
+    if (modal) modal.remove();
 }
