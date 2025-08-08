@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unaí Marmitas - Controle Mensal</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1><i class="fas fa-utensils"></i> Unaí Marmitas - Controle Mensal</h1>
+                <button class="btn btn-primary" id="btnNovaEmpresa">
+                    <i class="fas fa-plus"></i> Nova Empresa
+                </button>
+            </div>
+        </header>
+
+        <!-- Filtros e Resumo -->
+        <section class="controls">
+            <div class="month-selector">
+                <label>Mês/Ano:</label>
+                <select id="selectMes">
+                    <option value="2025-08">Agosto/2025</option>
+                </select>
+                <button class="btn btn-secondary" id="btnNovoMes">Novo Mês</button>
+                <button class="btn btn-secondary" id="btnConfiguracoes">
+                    <i class="fas fa-cog"></i> Configurações
+                </button>
+            </div>
+
+            <div class="resumo">
+                <div class="resumo-card">
+                    <h3>📊 RESUMO DO MÊS</h3>
+                    <div class="resumo-stats">
+                        <span>Total Faturado: <strong>R$ 0,00</strong></span>
+                        <span>Empresas: <strong>0</strong></span>
+                        <span>Concluídas: <strong>0</strong></span>
+                        <span>Pendentes: <strong>0</strong></span>
+                        <span>Com Erro: <strong>0</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="filtros">
+                <button class="filter-btn active" data-filter="todos">Todos</button>
+                <button class="filter-btn" data-filter="pendentes">Pendentes</button>
+                <button class="filter-btn" data-filter="erro">Com Erro</button>
+                <button class="filter-btn" data-filter="concluidos">Concluídos</button>
+            </div>
+        </section>
+
+        <!-- Grid de Empresas -->
+        <section class="empresas-grid" id="empresasGrid">
+            <!-- Cards das empresas serão inseridos aqui via JavaScript -->
+        </section>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/database.js"></script>
+    <script src="js/app.js"></script>
+
+</html>
