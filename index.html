@@ -6,6 +6,16 @@
     <title>Unaí Marmitas - Controle Mensal</title>
     <link rel="stylesheet" href="css/style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Meta tags para PWA e Mobile -->
+    <meta name="theme-color" content="#FFD700">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Unaí Marmitas">
+    
+    <!-- Preload de recursos críticos -->
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" as="style">
 </head>
 <body>
     <div class="container">
@@ -27,37 +37,102 @@
             </div>
         </header>
 
-        <!-- Filtros e Resumo -->
+        <!-- Breadcrumb Navigation -->
+        <nav class="breadcrumb" aria-label="breadcrumb">
+            <ol class="breadcrumb-list">
+                <li class="breadcrumb-item">
+                    <a href="#" class="breadcrumb-link">
+                        <i class="fas fa-home"></i> Dashboard
+                    </a>
+                </li>
+                <li class="breadcrumb-item">
+                    <i class="fas fa-building"></i> Empresas
+                </li>
+            </ol>
+        </nav>
+
+        <!-- Controles e Resumo Modernizados -->
         <section class="controls">
-            <div class="month-selector">
-                <label>Mês/Ano:</label>
-                <select id="selectMes">
-                    <option value="2025-08">Agosto/2025</option>
-                </select>
-                <button class="btn btn-secondary" id="btnNovoMes">Novo Mês</button>
-                <button class="btn btn-secondary" id="btnConfiguracoes">
-                    <i class="fas fa-cog"></i> Configurações
-                </button>
+            <!-- Seletor de Período -->
+            <div class="period-selector">
+                <div class="month-selector">
+                    <label for="selectMes">
+                        <i class="fas fa-calendar-alt"></i> Período:
+                    </label>
+                    <select id="selectMes">
+                        <option value="2025-08">Agosto/2025</option>
+                    </select>
+                    <button class="btn btn-secondary btn-sm" id="btnNovoMes">
+                        <i class="fas fa-plus"></i> Novo Período
+                    </button>
+                </div>
+                
+                <div class="quick-search">
+                    <input type="text" class="search-input" placeholder="🔍 Buscar empresa..." 
+                           id="searchEmpresa" autocomplete="off">
+                </div>
             </div>
 
+            <!-- Resumo Visual Aprimorado -->
             <div class="resumo">
                 <div class="resumo-card">
-                    <h3>📊 RESUMO DO MÊS</h3>
+                    <h3><i class="fas fa-chart-pie"></i> PAINEL DE CONTROLE</h3>
+                    
+                    <!-- Progresso do Mês -->
+                    <div class="progress-chart">
+                        <div class="flex justify-between items-center mb-sm">
+                            <span class="text-sm">Progresso do Mês</span>
+                            <span class="text-sm" id="progressText">75%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 75%" id="progressFill"></div>
+                        </div>
+                    </div>
+                    
                     <div class="resumo-stats">
-                        <span>Total Faturado: <strong>R$ 0,00</strong></span>
-                        <span>Empresas: <strong>0</strong></span>
-                        <span>Concluídas: <strong>0</strong></span>
-                        <span>Pendentes: <strong>0</strong></span>
-                        <span>Com Erro: <strong>0</strong></span>
+                        <div class="stat-item stat-faturado">
+                            <span class="stat-icon">💰</span>
+                            <span class="stat-label">Total Faturado</span>
+                            <span class="stat-value">R$ 0,00</span>
+                        </div>
+                        <div class="stat-item stat-empresas">
+                            <span class="stat-icon">🏢</span>
+                            <span class="stat-label">Empresas</span>
+                            <span class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item stat-concluidas">
+                            <span class="stat-icon">✅</span>
+                            <span class="stat-label">Concluídas</span>
+                            <span class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item stat-pendentes">
+                            <span class="stat-icon">⏳</span>
+                            <span class="stat-label">Pendentes</span>
+                            <span class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item stat-erro">
+                            <span class="stat-icon">❌</span>
+                            <span class="stat-label">Com Erro</span>
+                            <span class="stat-value">0</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
+            <!-- Filtros Modernizados -->
             <div class="filtros">
-                <button class="filter-btn active" data-filter="todos">Todos</button>
-                <button class="filter-btn" data-filter="pendentes">Pendentes</button>
-                <button class="filter-btn" data-filter="erro">Com Erro</button>
-                <button class="filter-btn" data-filter="concluidos">Concluídos</button>
+                <button class="filter-btn active" data-filter="todos">
+                    <span>Todos</span>
+                </button>
+                <button class="filter-btn" data-filter="pendentes">
+                    <span>Pendentes</span>
+                </button>
+                <button class="filter-btn" data-filter="erro">
+                    <span>Com Erro</span>
+                </button>
+                <button class="filter-btn" data-filter="concluidos">
+                    <span>Concluídos</span>
+                </button>
             </div>
         </section>
 
@@ -67,10 +142,95 @@
         </section>
     </div>
 
-    <!-- Scripts -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/database.js"></script>
-    <script src="js/app.js"></script>
+    <!-- Floating Action Button -->
+    <button class="fab" id="fabMain" title="Ações Rápidas">
+        <i class="fas fa-plus"></i>
+    </button>
 
+    <!-- Scripts -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- Sistema de Notificações (temporário) -->
+<script>
+// Sistema de notificações temporário
+window.NotificationManager = {
+    show(message, type = 'info', duration = 3000) {
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 5px;
+            color: white;
+            font-weight: 500;
+            z-index: 10000;
+            max-width: 300px;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        `;
+        
+        // Cores por tipo
+        const colors = {
+            success: '#28a745',
+            error: '#dc3545',
+            warning: '#ffc107',
+            info: '#17a2b8'
+        };
+        
+        notification.style.backgroundColor = colors[type] || colors.info;
+        notification.textContent = message;
+        
+        document.body.appendChild(notification);
+        
+        // Animar entrada
+        setTimeout(() => {
+            notification.style.opacity = '1';
+            notification.style.transform = 'translateX(0)';
+        }, 100);
+        
+        // Remover após duração
+        if (duration > 0) {
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, duration);
+        }
+        
+        return notification;
+    },
+    
+    success(message, duration = 3000) {
+        return this.show(message, 'success', duration);
+    },
+    
+    error(message, duration = 5000) {
+        return this.show(message, 'error', duration);
+    },
+    
+    warning(message, duration = 4000) {
+        return this.show(message, 'warning', duration);
+    },
+    
+    info(message, duration = 3000) {
+        return this.show(message, 'info', duration);
+    }
+};
+</script>
+
+<!-- Compatibilidade temporária -->
+<script src="js/compatibility.js"></script>
+
+<!-- App principal como module -->
+<script type="module" src="js/app.js"></script>
+
+</body>
 </html>
