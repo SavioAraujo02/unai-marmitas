@@ -11,8 +11,7 @@ import { controleService } from './services/controle-service.js';
 import { templateService } from './services/template-service.js';
 import { exportService } from './services/export-service.js';
 import { EmpresaModal } from './components/modals/empresa-modal.js';
-import { LancamentoModal } from './components/modals/lancamento-modal.js';
-import { LancamentoRapidoModal } from './components/modals/lancamento-rapido-modal.js';
+import { LancamentoModal } from './components/forms/lancamento-form.js';
 
 class UnaiMarmitasApp {
     constructor() {
@@ -627,7 +626,7 @@ class UnaiMarmitasApp {
                     </button>
                 `);
                 buttons.push(`
-                    <button class="btn btn-secondary btn-small" onclick="app.editarEmpresa(${empresaId})" title="Ver todos os lançamentos">
+                    <button class="btn btn-secondary btn-small" onclick="app.abrirLancamentosCompletos(${empresaId})" title="Ver todos os lançamentos">
                         <i class="fas fa-list"></i>
                     </button>
                 `);
@@ -635,7 +634,7 @@ class UnaiMarmitasApp {
                 
             case 'erro-nf':
                 buttons.push(`
-                    <button class="btn btn-primary btn-small" onclick="app.editarEmpresa(${empresaId})" title="Editar lançamentos">
+                    <button class="btn btn-primary btn-small" onclick="app.abrirLancamentosCompletos(${empresaId})" title="Editar lançamentos">
                         <i class="fas fa-edit"></i>
                     </button>
                 `);
@@ -648,7 +647,7 @@ class UnaiMarmitasApp {
                 
             case 'concluido':
                 buttons.push(`
-                    <button class="btn btn-secondary btn-small" onclick="app.editarEmpresa(${empresaId})" title="Ver dados">
+                    <button class="btn btn-secondary btn-small" onclick="app.abrirLancamentosCompletos(${empresaId})" title="Ver dados">
                         <i class="fas fa-eye"></i>
                     </button>
                 `);
@@ -666,7 +665,7 @@ class UnaiMarmitasApp {
                     </button>
                 `);
                 buttons.push(`
-                    <button class="btn btn-secondary btn-small" onclick="app.editarEmpresa(${empresaId})" title="Gerenciar">
+                    <button class="btn btn-secondary btn-small" onclick="app.abrirLancamentosCompletos(${empresaId})" title="Gerenciar">
                         <i class="fas fa-edit"></i>
                     </button>
                 `);
@@ -712,17 +711,50 @@ class UnaiMarmitasApp {
         }, 5 * 60 * 1000);
     }
     
-    /**
-     * Métodos de ação (compatibilidade com código existente)
-     */
     modalLancamentoRapido(empresaId) {
-        LancamentoRapidoModal.open(empresaId);
+        console.log('🔍 Tentando abrir lançamento rápido para empresa:', empresaId);
+        
+        try {
+            // Import dinâmico para garantir que funcione
+            import('./components/modals/lancamento-rapido-modal.js').then(module => {
+                console.log('✅ Import realizado:', module);
+                const { LancamentoRapidoModal } = module;
+                LancamentoRapidoModal.open(empresaId);
+            }).catch(error => {
+                console.error('❌ Erro no import:', error);
+                if (window.NotificationManager) {
+                    window.NotificationManager.error('Erro ao carregar modal de lançamento rápido: ' + error.message);
+                }
+            });
+            
+        } catch (error) {
+            console.error('❌ Erro geral:', error);
+            if (window.NotificationManager) {
+                window.NotificationManager.error('Erro ao abrir lançamento rápido');
+            }
+        }
     }
     
     editarEmpresa(empresaId) {
-        LancamentoModal.open(empresaId);
+        this.abrirLancamentosCompletos(empresaId);
     }
     
+    /**
+     * Abrir modal de lançamentos completos
+     */
+    abrirLancamentosCompletos(empresaId) {
+        // Importar dinamicamente o modal de lançamentos
+        import('./components/forms/lancamento-form.js').then(module => {
+            const { LancamentoModal } = module;
+            LancamentoModal.open(empresaId);
+        }).catch(error => {
+            console.error('Erro ao carregar modal de lançamentos:', error);
+            if (window.NotificationManager) {
+                window.NotificationManager.error('Erro ao abrir lançamentos completos');
+            }
+        });
+    }
+
     async avancarStatusProximo(empresaId) {
         const controles = stateManager.get('controles');
         const controle = controles.find(c => c.empresa_id === empresaId);
