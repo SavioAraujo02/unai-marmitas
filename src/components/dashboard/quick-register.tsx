@@ -1,4 +1,3 @@
-// src/components/dashboard/quick-register.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -6,7 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { supabase } from '@/lib/supabase'
 import { Empresa } from '@/types'
-import { getPrecoMarmita, getTodayString } from '@/lib/utils'
+import { getPrecoMarmita, getTodayString, getPrecoMarmitaFromConfig } from '@/lib/utils'
+import { useToast } from '@/hooks/use-toast'
 
 interface QuickRegisterProps {
   onSuccess?: () => void
@@ -17,9 +17,12 @@ export function QuickRegister({ onSuccess }: QuickRegisterProps) {
   const [selectedEmpresa, setSelectedEmpresa] = useState<number | null>(null)
   const [selectedTamanho, setSelectedTamanho] = useState<'P' | 'M' | 'G'>('M')
   const [loading, setLoading] = useState(false)
+  const [precos, setPrecos] = useState({ P: 15, M: 18, G: 22 })
+  const toast = useToast()
 
   useEffect(() => {
     fetchEmpresas()
+    carregarPrecos()
   }, [])
 
   async function fetchEmpresas() {
@@ -32,6 +35,14 @@ export function QuickRegister({ onSuccess }: QuickRegisterProps) {
     setEmpresas(data || [])
   }
 
+  function carregarPrecos() {
+    // Usar função síncrona que busca do localStorage
+    const precoP = getPrecoMarmitaFromConfig('P')
+    const precoM = getPrecoMarmitaFromConfig('M')
+    const precoG = getPrecoMarmitaFromConfig('G')
+    setPrecos({ P: precoP, M: precoM, G: precoG })
+  }
+
   async function handleRegister() {
     if (!selectedEmpresa) return
 
@@ -39,7 +50,7 @@ export function QuickRegister({ onSuccess }: QuickRegisterProps) {
       setLoading(true)
       
       const empresa = empresas.find(e => e.id === selectedEmpresa)
-      const preco = getPrecoMarmita(selectedTamanho)
+      const preco = await getPrecoMarmita(selectedTamanho)
 
       const { error } = await supabase
         .from('consumos')
@@ -48,7 +59,11 @@ export function QuickRegister({ onSuccess }: QuickRegisterProps) {
           responsavel: empresa?.responsavel,
           data_consumo: getTodayString(),
           tamanho: selectedTamanho,
-          preco
+          quantidade: 1,
+          preco,
+          itens_extras: [],
+          valor_extras: 0,
+          valor_desconto: 0
         })
 
       if (error) throw error
@@ -59,10 +74,14 @@ export function QuickRegister({ onSuccess }: QuickRegisterProps) {
       
       onSuccess?.()
       
-      alert('Marmita registrada com sucesso!')
+      toast.success(
+        'Marmita Registrada!',
+        `Marmita ${selectedTamanho} registrada para ${empresa?.nome}`,
+        { label: 'Ver Consumos', url: '/consumos' }
+      )
     } catch (error) {
       console.error('Erro ao registrar:', error)
-      alert('Erro ao registrar marmita')
+      toast.error('Erro ao Registrar', 'Não foi possível registrar a marmita. Tente novamente.')
     } finally {
       setLoading(false)
     }
@@ -82,7 +101,7 @@ export function QuickRegister({ onSuccess }: QuickRegisterProps) {
             <select
               value={selectedEmpresa || ''}
               onChange={(e) => setSelectedEmpresa(Number(e.target.value))}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
             >
               <option value="">Selecione uma empresa...</option>
               {empresas.map((empresa) => (
@@ -104,13 +123,13 @@ export function QuickRegister({ onSuccess }: QuickRegisterProps) {
                   onClick={() => setSelectedTamanho(tamanho)}
                   className={`flex-1 p-3 rounded-md border-2 transition-colors ${
                     selectedTamanho === tamanho
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-300 hover:border-gray-400'
+                      ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
+                      : 'border-gray-300 hover:border-yellow-300'
                   }`}
                 >
                   <div className="font-semibold">{tamanho}</div>
                   <div className="text-sm text-gray-600">
-                    R$ {getPrecoMarmita(tamanho).toFixed(2)}
+                    R$ {precos[tamanho].toFixed(2)}
                   </div>
                 </button>
               ))}
