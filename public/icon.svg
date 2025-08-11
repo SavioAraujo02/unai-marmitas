@@ -1,0 +1,12 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fundo amarelo -->
+  <rect width="512" height="512" rx="64" fill="#F59E0B"/>
+  
+  <!-- Emoji de marmita estilizado -->
+  <circle cx="256" cy="200" r="120" fill="#FFFFFF" stroke="#D97706" stroke-width="8"/>
+  <circle cx="256" cy="200" r="80" fill="#FEF3C7"/>
+  
+  <!-- Texto -->
+  <text x="256" y="380" font-family="Arial, sans-serif" font-size="48" font-weight="bold" text-anchor="middle" fill="#FFFFFF">UNAÍ</text>
+  <text x="256" y="420" font-family="Arial, sans-serif" font-size="24" text-anchor="middle" fill="#FEF3C7">MARMITAS</text>
+</svg>
