@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { Consumo, Empresa, ItemExtra } from '@/types'
 import { getTodayString, calcularValorComDesconto, getPrecoMarmita } from '@/lib/utils'
 import { useNotifications } from '@/hooks/use-notifications'
+import { useConfiguracoes } from './use-configuracoes'
 
 export function useConsumos() {
   const [consumos, setConsumos] = useState<Consumo[]>([])
@@ -14,6 +15,7 @@ export function useConsumos() {
   const { showSuccess, showError } = useNotifications()
   const [selectedDate, setSelectedDate] = useState(getTodayString())
   const [selectedEmpresa, setSelectedEmpresa] = useState<number | null>(null)
+  const { configuracoes } = useConfiguracoes()
 
   useEffect(() => {
     fetchEmpresas()

@@ -1,14 +1,14 @@
 // src/app/fechamentos/page.tsx
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react' // ← Adicionar useEffect aqui
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FechamentosTable } from '@/components/tables/fechamentos-table'
 import { FechamentoForm } from '@/components/forms/fechamento-form'
 import { useFechamentos } from '@/hooks/use-fechamentos'
 import { Fechamento } from '@/types'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, getPrecoMarmitaFromConfig } from '@/lib/utils'
 import { 
   Plus, 
   Calendar, 
@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 
 import { usePDFReports } from '@/hooks/use-pdf-reports'
+import { useConfiguracoes } from '@/hooks/use-configuracoes'
 
 type ViewMode = 'list' | 'edit' | 'view'
 
@@ -42,6 +43,19 @@ export default function FechamentosPage() {
 
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [selectedFechamento, setSelectedFechamento] = useState<Fechamento | null>(null)
+  const { configuracoes } = useConfiguracoes()
+  const [precos, setPrecos] = useState({ P: 15, M: 18, G: 22 })
+
+  useEffect(() => {
+    function carregarPrecos() {
+      setPrecos({
+        P: getPrecoMarmitaFromConfig('P'),
+        M: getPrecoMarmitaFromConfig('M'),
+        G: getPrecoMarmitaFromConfig('G')
+      })
+    }
+    carregarPrecos()
+  }, [])
 
   function handleEdit(fechamento: Fechamento) {
     setSelectedFechamento(fechamento)
@@ -101,55 +115,136 @@ export default function FechamentosPage() {
   }
 
   async function handleEnviarRelatorio(fechamento: Fechamento) {
-    const result = await gerarRelatorioEmpresa(
-      fechamento.empresa_id,
-      selectedMonth.mes,
-      selectedMonth.ano
-    )
-    
-    if (result.success) {
-      await updateFechamento(fechamento.id, { 
-        status: 'relatorio_enviado',
-        data_ultimo_envio: new Date().toISOString()
-      })
-      alert(`Relatório enviado para ${fechamento.empresa?.nome}!`)
-    } else {
-      await updateFechamento(fechamento.id, { 
-        status: 'erro_relatorio',
-        ultimo_erro: result.error || 'Erro ao enviar relatório'
-      })
-      alert(result.error || 'Erro ao enviar relatório!')
+    try {
+      console.log('🔄 Iniciando geração de relatório para:', fechamento.empresa?.nome)
+      console.log('📋 Dados do fechamento:', { id: fechamento.id, empresa_id: fechamento.empresa_id })
+      
+      const result = await gerarRelatorioEmpresa(
+        fechamento.empresa_id,
+        selectedMonth.mes,
+        selectedMonth.ano
+      )
+      
+      console.log('📊 Resultado da geração do relatório:', result)
+      
+      if (result.success) {
+        console.log('✅ Relatório gerado com sucesso, atualizando status...')
+        
+        const updateData = { 
+          status: 'relatorio_enviado' as const,
+          data_ultimo_envio: new Date().toISOString(),
+          ultimo_erro: undefined
+        }
+        
+        console.log('📝 Dados para atualização:', updateData)
+        
+        const updateResult = await updateFechamento(fechamento.id, updateData)
+        
+        console.log('📊 Resultado da atualização:', updateResult)
+        
+        if (updateResult.success) {
+          alert(`Relatório enviado com sucesso para ${fechamento.empresa?.nome}!`)
+        } else {
+          console.error('❌ Erro ao atualizar status:', updateResult.error)
+          alert('Relatório gerado mas houve erro ao atualizar status')
+        }
+      } else {
+        console.log('❌ Erro na geração do relatório, atualizando status de erro...')
+        const errorMessage = result.error || 'Erro desconhecido ao gerar relatório'
+        
+        const updateResult = await updateFechamento(fechamento.id, { 
+          status: 'erro_relatorio' as const,
+          ultimo_erro: errorMessage
+        })
+        
+        if (updateResult.success) {
+          alert(`Erro ao gerar relatório: ${errorMessage}`)
+        } else {
+          console.error('❌ Erro ao atualizar status de erro:', updateResult.error)
+          alert(`Erro ao gerar relatório: ${errorMessage}\nTambém houve erro ao salvar o status.`)
+        }
+      }
+    } catch (error) {
+      console.error('💥 Erro inesperado em handleEnviarRelatorio:', error)
+      
+      try {
+        await updateFechamento(fechamento.id, { 
+          status: 'erro_relatorio' as const,
+          ultimo_erro: 'Erro inesperado ao processar relatório'
+        })
+      } catch (updateError) {
+        console.error('💥 Erro ao salvar status de erro:', updateError)
+      }
+      
+      alert('Erro inesperado ao processar relatório')
     }
   }
   
   async function handleEnviarCobranca(fechamento: Fechamento) {
-    // Simular envio de NF (aqui você integraria com seu sistema de NF)
-    const sucesso = Math.random() > 0.3 // 70% de chance de sucesso para teste
-    
-    if (sucesso) {
-      const result = await updateFechamento(fechamento.id, { 
-        status: 'nf_enviada',
-        data_ultimo_envio: new Date().toISOString()
-      })
-      if (result.success) {
-        alert(`Nota Fiscal enviada para ${fechamento.empresa?.nome}!`)
+    try {
+      console.log('Iniciando envio de cobrança para:', fechamento.empresa?.nome)
+      
+      // Simular envio de NF (aqui você integraria com seu sistema de NF)
+      const sucesso = Math.random() > 0.3 // 70% de chance de sucesso para teste
+      
+      if (sucesso) {
+        const result = await updateFechamento(fechamento.id, { 
+          status: 'nf_enviada',
+          data_ultimo_envio: new Date().toISOString(),
+          ultimo_erro: undefined
+        })
+        
+        if (result.success) {
+          alert(`Nota Fiscal enviada com sucesso para ${fechamento.empresa?.nome}!`)
+        } else {
+          console.error('Erro ao atualizar status de NF enviada:', result.error)
+          alert('NF processada mas erro ao atualizar status')
+        }
+      } else {
+        const result = await updateFechamento(fechamento.id, { 
+          status: 'erro_nf',
+          ultimo_erro: 'Erro ao gerar/enviar nota fiscal'
+        })
+        
+        if (result.success) {
+          alert('Erro ao enviar Nota Fiscal!')
+        }
       }
-    } else {
-      await updateFechamento(fechamento.id, { 
-        status: 'erro_nf',
-        ultimo_erro: 'Erro ao gerar/enviar nota fiscal'
-      })
-      alert('Erro ao enviar Nota Fiscal!')
+    } catch (error) {
+      console.error('Erro inesperado em handleEnviarCobranca:', error)
+      
+      try {
+        await updateFechamento(fechamento.id, { 
+          status: 'erro_nf',
+          ultimo_erro: 'Erro inesperado ao processar NF'
+        })
+      } catch (updateError) {
+        console.error('Erro ao salvar status de erro NF:', updateError)
+      }
+      
+      alert('Erro inesperado ao processar Nota Fiscal')
     }
   }
   
   async function handleMarcarPago(fechamento: Fechamento) {
-    const result = await updateFechamento(fechamento.id, { 
-      status: 'concluido',
-      data_ultimo_envio: new Date().toISOString()
-    })
-    if (result.success) {
-      alert(`Pagamento confirmado para ${fechamento.empresa?.nome}!`)
+    try {
+      console.log('Marcando como pago:', fechamento.empresa?.nome)
+      
+      const result = await updateFechamento(fechamento.id, { 
+        status: 'concluido',
+        data_ultimo_envio: new Date().toISOString(),
+        ultimo_erro: undefined
+      })
+      
+      if (result.success) {
+        alert(`Pagamento confirmado para ${fechamento.empresa?.nome}!`)
+      } else {
+        console.error('Erro ao marcar como pago:', result.error)
+        alert('Erro ao confirmar pagamento')
+      }
+    } catch (error) {
+      console.error('Erro inesperado em handleMarcarPago:', error)
+      alert('Erro inesperado ao confirmar pagamento')
     }
   }
 
@@ -236,17 +331,17 @@ export default function FechamentosPage() {
                 <div className="bg-blue-50 p-4 rounded-lg text-center">
                   <div className="text-2xl font-bold text-blue-600">{selectedFechamento.total_p}</div>
                   <div className="text-sm text-blue-800">Pequenas (P)</div>
-                  <div className="text-xs text-gray-600">R$ 15,00 cada</div>
+                  <div className="text-xs text-gray-600">{formatCurrency(precos.P)} cada</div>
                 </div>
                 <div className="bg-green-50 p-4 rounded-lg text-center">
                   <div className="text-2xl font-bold text-green-600">{selectedFechamento.total_m}</div>
                   <div className="text-sm text-green-800">Médias (M)</div>
-                  <div className="text-xs text-gray-600">R$ 18,00 cada</div>
+                  <div className="text-xs text-gray-600">{formatCurrency(precos.M)} cada</div>
                 </div>
                 <div className="bg-orange-50 p-4 rounded-lg text-center">
                   <div className="text-2xl font-bold text-orange-600">{selectedFechamento.total_g}</div>
                   <div className="text-sm text-orange-800">Grandes (G)</div>
-                  <div className="text-xs text-gray-600">R$ 22,00 cada</div>
+                  <div className="text-xs text-gray-600">{formatCurrency(precos.G)} cada</div>
                 </div>
               </div>
 

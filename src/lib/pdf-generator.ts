@@ -1,10 +1,21 @@
 // src/lib/pdf-generator.ts
 import jsPDF from 'jspdf'
-import 'jspdf-autotable'
 import { Fechamento, Consumo, Empresa } from '@/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
-// Estender o tipo jsPDF para incluir autoTable
+// Importação forçada do autoTable
+let autoTableLoaded = false
+
+if (typeof window !== 'undefined') {
+  try {
+    require('jspdf-autotable')
+    autoTableLoaded = true
+  } catch (error) {
+    console.error('Erro ao carregar jspdf-autotable:', error)
+  }
+}
+
+// Declaração de tipo para autoTable
 declare module 'jspdf' {
   interface jsPDF {
     autoTable: (options: any) => jsPDF
@@ -16,6 +27,14 @@ interface RelatorioData {
   fechamento: Fechamento
   consumos: Consumo[]
   periodo: { mes: number; ano: number }
+  configuracoes: {
+    precos: {
+      marmita_p: number
+      marmita_m: number
+      marmita_g: number
+      taxa_adicional: number
+    }
+  }
 }
 
 export class PDFGenerator {
@@ -29,11 +48,32 @@ export class PDFGenerator {
     this.pageWidth = this.doc.internal.pageSize.getWidth()
     this.pageHeight = this.doc.internal.pageSize.getHeight()
     this.margin = 20
+    
+    // Forçar carregamento do autoTable se ainda não foi carregado
+    if (typeof window !== 'undefined' && !autoTableLoaded) {
+      try {
+        require('jspdf-autotable')
+        autoTableLoaded = true
+      } catch (error) {
+        console.error('Erro ao carregar autoTable no construtor:', error)
+      }
+    }
+  }
+
+  private loadAutoTable() {
+    // Não é mais necessário, mas mantemos para compatibilidade
+    return autoTableLoaded
   }
 
   // Gerar relatório mensal para empresa
   async gerarRelatorioMensal(data: RelatorioData): Promise<Blob> {
     this.doc = new jsPDF()
+    
+    // Garantir que autoTable está disponível
+    if (typeof window !== 'undefined' && !autoTableLoaded) {
+      require('jspdf-autotable')
+      autoTableLoaded = true
+    }
     
     // Cabeçalho
     this.adicionarCabecalho(data)
@@ -62,6 +102,12 @@ export class PDFGenerator {
     periodo: { mes: number; ano: number }
   ): Promise<Blob> {
     this.doc = new jsPDF()
+    
+    // Garantir que autoTable está disponível
+    if (typeof window !== 'undefined' && !autoTableLoaded) {
+      require('jspdf-autotable')
+      autoTableLoaded = true
+    }
     
     // Cabeçalho consolidado
     this.adicionarCabecalhoConsolidado(periodo)
@@ -234,7 +280,7 @@ export class PDFGenerator {
     }, {} as Record<string, Consumo[]>)
     
     // Preparar dados para a tabela
-    const tableData = Object.entries(consumosPorData).map(([data, consumosData]) => {
+    const tableData: string[][] = Object.entries(consumosPorData).map(([data, consumosData]) => {
       const totalP = consumosData.filter(c => c.tamanho === 'P').reduce((sum, c) => sum + c.quantidade, 0)
       const totalM = consumosData.filter(c => c.tamanho === 'M').reduce((sum, c) => sum + c.quantidade, 0)
       const totalG = consumosData.filter(c => c.tamanho === 'G').reduce((sum, c) => sum + c.quantidade, 0)
@@ -250,7 +296,14 @@ export class PDFGenerator {
       ]
     })
     
-    // Gerar tabela
+    // Verificar se autoTable está disponível
+    if (!this.doc.autoTable || !autoTableLoaded) {
+      // Se autoTable não estiver disponível, criar tabela manual
+      this.criarTabelaManual(y, tableData, ['Data', 'P', 'M', 'G', 'Total', 'Valor'])
+      return
+    }
+    
+    // Gerar tabela com autoTable
     this.doc.autoTable({
       startY: y,
       head: [['Data', 'P', 'M', 'G', 'Total', 'Valor']],
@@ -277,7 +330,7 @@ export class PDFGenerator {
   }
 
   private adicionarResumoTamanhos(fechamento: Fechamento) {
-    const finalY = (this.doc as any).lastAutoTable.finalY + 20
+    const finalY = (this.doc as any).lastAutoTable?.finalY || 300
     
     // Título da seção
     this.doc.setFontSize(14)
@@ -345,7 +398,7 @@ export class PDFGenerator {
     this.doc.text('DETALHAMENTO POR EMPRESA', this.margin, y)
     
     // Preparar dados para a tabela
-    const tableData = fechamentos.map((fechamento, index) => {
+    const tableData: string[][] = fechamentos.map((fechamento, index) => {
       const totalMarmitas = fechamento.total_p + fechamento.total_m + fechamento.total_g
       return [
         (index + 1).toString(),
@@ -376,7 +429,15 @@ export class PDFGenerator {
       formatCurrency(totais.valor)
     ])
     
-    // Gerar tabela
+    // Verificar se autoTable está disponível
+    if (!this.doc.autoTable || !autoTableLoaded) {
+      // Se autoTable não estiver disponível, criar tabela manual
+      const headers = ['#', 'Empresa', 'P', 'M', 'G', 'Total', 'Valor']
+      this.criarTabelaManual(y + 10, tableData, headers)
+      return
+    }
+    
+    // Gerar tabela com autoTable
     this.doc.autoTable({
       startY: y + 10,
       head: [['#', 'Empresa', 'P', 'M', 'G', 'Total', 'Valor']],
@@ -411,7 +472,7 @@ export class PDFGenerator {
   }
 
   private adicionarDistribuicaoTamanhos(fechamentos: Fechamento[]) {
-    const finalY = (this.doc as any).lastAutoTable.finalY + 20
+    const finalY = (this.doc as any).lastAutoTable?.finalY || 250
     
     // Calcular distribuição
     const totais = fechamentos.reduce((acc, f) => ({
@@ -426,7 +487,7 @@ export class PDFGenerator {
       // Título da seção
       this.doc.setFontSize(14)
       this.doc.setFont('helvetica', 'bold')
-      this.doc.text('DISTRIBUIÇÃO GERAL POR TAMANHO', this.margin, finalY)
+      this.doc.text('DISTRIBUIÇÃO GERAL POR TAMANHO', this.margin, finalY + 20)
       
       const percP = ((totais.p / totalGeral) * 100).toFixed(1)
       const percM = ((totais.m / totalGeral) * 100).toFixed(1)
@@ -435,29 +496,10 @@ export class PDFGenerator {
       this.doc.setFontSize(11)
       this.doc.setFont('helvetica', 'normal')
       
-      const y = finalY + 15
+      const y = finalY + 35
       this.doc.text(`• Pequenas (P): ${totais.p} unidades (${percP}%)`, this.margin, y)
       this.doc.text(`• Médias (M): ${totais.m} unidades (${percM}%)`, this.margin, y + 8)
       this.doc.text(`• Grandes (G): ${totais.g} unidades (${percG}%)`, this.margin, y + 16)
-      
-      // Gráfico simples em texto
-      this.doc.setFontSize(10)
-      this.doc.text('Distribuição Visual:', this.margin, y + 30)
-      
-      const barWidth = 100
-      const barP = (totais.p / totalGeral) * barWidth
-      const barM = (totais.m / totalGeral) * barWidth
-      const barG = (totais.g / totalGeral) * barWidth
-      
-      // Barras coloridas (simuladas com retângulos)
-      this.doc.setFillColor(59, 130, 246) // Azul para P
-      this.doc.rect(this.margin, y + 35, barP, 5, 'F')
-      
-      this.doc.setFillColor(34, 197, 94) // Verde para M
-      this.doc.rect(this.margin + barP, y + 35, barM, 5, 'F')
-      
-      this.doc.setFillColor(249, 115, 22) // Laranja para G
-      this.doc.rect(this.margin + barP + barM, y + 35, barG, 5, 'F')
     }
   }
 
@@ -487,5 +529,100 @@ export class PDFGenerator {
   // Método para download direto
   downloadPDF(filename: string) {
     this.doc.save(filename)
+  }
+
+  // Método para criar tabela manual caso autoTable não funcione
+  private criarTabelaManual(startY: number, data: string[][], headers: string[]) {
+    let y = startY
+    const rowHeight = 8
+    
+    // Ajustar larguras das colunas baseado no tipo de tabela
+    let colWidths: number[]
+    if (headers.length === 6) {
+      // Tabela de consumos diários: ['Data', 'P', 'M', 'G', 'Total', 'Valor']
+      colWidths = [35, 20, 20, 20, 25, 35]
+    } else {
+      // Tabela de empresas: ['#', 'Empresa', 'P', 'M', 'G', 'Total', 'Valor']
+      colWidths = [15, 60, 15, 15, 15, 20, 25]
+    }
+    
+    let currentX = this.margin
+
+    // Desenhar cabeçalho
+    this.doc.setFillColor(255, 193, 7) // Amarelo
+    this.doc.setFont('helvetica', 'bold')
+    this.doc.setFontSize(9)
+    this.doc.setTextColor(0, 0, 0)
+    
+    headers.forEach((header, index) => {
+      this.doc.rect(currentX, y, colWidths[index], rowHeight, 'FD')
+      
+      // Centralizar texto no cabeçalho
+      const textWidth = this.doc.getTextWidth(header)
+      const textX = currentX + (colWidths[index] / 2) - (textWidth / 2)
+      this.doc.text(header, textX, y + 5.5)
+      currentX += colWidths[index]
+    })
+
+    y += rowHeight
+
+    // Desenhar dados
+    this.doc.setFont('helvetica', 'normal')
+    this.doc.setFontSize(8)
+    
+    data.forEach((row, rowIndex) => {
+      currentX = this.margin
+      
+      // Alternar cores das linhas
+      if (rowIndex % 2 === 0) {
+        this.doc.setFillColor(250, 250, 250) // Cinza muito claro
+      } else {
+        this.doc.setFillColor(255, 255, 255) // Branco
+      }
+      
+      // Destacar linha de totais
+      if (rowIndex === data.length - 1 && row[1] === 'TOTAL GERAL') {
+        this.doc.setFont('helvetica', 'bold')
+        this.doc.setFillColor(240, 240, 240) // Cinza claro
+      }
+      
+      row.forEach((cell, colIndex) => {
+        this.doc.rect(currentX, y, colWidths[colIndex], rowHeight, 'FD')
+        
+        // Alinhamento baseado no conteúdo
+        let textX = currentX + 2 // Padrão: esquerda
+        
+        if (headers.length === 6) {
+          // Tabela de consumos
+          if (colIndex >= 1 && colIndex <= 4) { // P, M, G, Total - centralizar
+            const textWidth = this.doc.getTextWidth(cell)
+            textX = currentX + (colWidths[colIndex] / 2) - (textWidth / 2)
+          } else if (colIndex === 5) { // Valor - direita
+            textX = currentX + colWidths[colIndex] - this.doc.getTextWidth(cell) - 2
+          }
+        } else {
+          // Tabela de empresas
+          if (colIndex === 0 || (colIndex >= 2 && colIndex <= 5)) { // #, P, M, G, Total - centralizar
+            const textWidth = this.doc.getTextWidth(cell)
+            textX = currentX + (colWidths[colIndex] / 2) - (textWidth / 2)
+          } else if (colIndex === 6) { // Valor - direita
+            textX = currentX + colWidths[colIndex] - this.doc.getTextWidth(cell) - 2
+          }
+        }
+        
+        this.doc.text(cell, textX, y + 5.5)
+        currentX += colWidths[colIndex]
+      })
+      
+      y += rowHeight
+      
+      // Resetar formatação após linha de totais
+      if (rowIndex === data.length - 2) {
+        this.doc.setFont('helvetica', 'normal')
+      }
+    })
+
+    // Definir posição final para outros elementos
+    ;(this.doc as any).lastAutoTable = { finalY: y + 5 }
   }
 }

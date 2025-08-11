@@ -2,6 +2,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
 
 interface Configuracoes {
   precos: {
@@ -128,16 +129,50 @@ export function useConfiguracoes() {
     carregarConfiguracoes()
   }, [])
 
-  function carregarConfiguracoes() {
+  async function carregarConfiguracoes() {
     try {
       setLoading(true)
+      
+      // Tentar carregar do banco de dados primeiro
+      const { data, error } = await supabase
+        .from('configuracoes')
+        .select('chave, valor')
+
+      if (error) {
+        console.error('Erro ao carregar do banco, usando localStorage:', error)
+        // Fallback para localStorage
+        const configSalvas = localStorage.getItem('unai-marmitas-config')
+        if (configSalvas) {
+          const parsed = JSON.parse(configSalvas)
+          setConfiguracoes({ ...configuracoesPadrao, ...parsed })
+        }
+        return
+      }
+
+      // Montar configurações a partir do banco
+      const configFromDB: Partial<Configuracoes> = {}
+      
+      data?.forEach((item) => {
+        if (item.chave === 'precos') {
+          configFromDB.precos = item.valor
+        } else if (item.chave === 'empresa') {
+          configFromDB.empresa = item.valor
+        }
+      })
+
+      // Mesclar com padrão e atualizar
+      const configFinais = { ...configuracoesPadrao, ...configFromDB }
+      setConfiguracoes(configFinais)
+      
+      console.log('✅ Configurações carregadas do banco:', configFromDB)
+    } catch (error) {
+      console.error('Erro ao carregar configurações:', error)
+      // Fallback para localStorage em caso de erro
       const configSalvas = localStorage.getItem('unai-marmitas-config')
       if (configSalvas) {
         const parsed = JSON.parse(configSalvas)
         setConfiguracoes({ ...configuracoesPadrao, ...parsed })
       }
-    } catch (error) {
-      console.error('Erro ao carregar configurações:', error)
     } finally {
       setLoading(false)
     }
@@ -147,11 +182,50 @@ export function useConfiguracoes() {
     try {
       setSaving(true)
       const configAtualizadas = { ...configuracoes, ...novasConfiguracoes }
+      
+      // Salvar no banco de dados
+      if (novasConfiguracoes.precos) {
+        const { error } = await supabase
+          .from('configuracoes')
+          .upsert({ 
+            chave: 'precos', 
+            valor: novasConfiguracoes.precos 
+          }, { 
+            onConflict: 'chave' 
+          })
+        
+        if (error) {
+          console.error('Erro ao salvar preços no banco:', error)
+          throw error
+        }
+      }
+      
+      if (novasConfiguracoes.empresa) {
+        const { error } = await supabase
+          .from('configuracoes')
+          .upsert({ 
+            chave: 'empresa', 
+            valor: novasConfiguracoes.empresa 
+          }, { 
+            onConflict: 'chave' 
+          })
+        
+        if (error) {
+          console.error('Erro ao salvar empresa no banco:', error)
+          throw error
+        }
+      }
+      
+      // Backup no localStorage
       localStorage.setItem('unai-marmitas-config', JSON.stringify(configAtualizadas))
+      
+      // Atualizar estado
       setConfiguracoes(configAtualizadas)
+      
+      console.log('✅ Configurações salvas no banco com sucesso')
       return { success: true }
     } catch (error) {
-      console.error('Erro ao salvar configurações:', error)
+      console.error('❌ Erro ao salvar configurações:', error)
       return { success: false, error }
     } finally {
       setSaving(false)
@@ -161,6 +235,15 @@ export function useConfiguracoes() {
   async function resetarConfiguracoes() {
     try {
       setSaving(true)
+      
+      // Deletar configurações do banco
+      const { error } = await supabase
+        .from('configuracoes')
+        .delete()
+        .neq('id', 0) // Deletar todos
+      
+      if (error) throw error
+      
       localStorage.removeItem('unai-marmitas-config')
       setConfiguracoes(configuracoesPadrao)
       return { success: true }

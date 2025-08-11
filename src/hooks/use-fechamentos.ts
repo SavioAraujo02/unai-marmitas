@@ -101,9 +101,22 @@ export function useFechamentos() {
 
       await fetchFechamentos()
       return { success: true, count: fechamentosParaInserir.length }
-    } catch (error) {
+    } catch (error: unknown) {
+      const getErrorMessage = (err: unknown): string => {
+        if (err instanceof Error) {
+          return err.message
+        }
+        if (typeof err === 'string') {
+          return err
+        }
+        if (err && typeof err === 'object' && 'message' in err) {
+          return String((err as any).message)
+        }
+        return 'Erro ao gerar fechamentos'
+      }
+
       console.error('Erro ao gerar fechamentos:', error)
-      return { success: false, error }
+      return { success: false, error: getErrorMessage(error) }
     } finally {
       setLoading(false)
     }
@@ -111,6 +124,17 @@ export function useFechamentos() {
 
   async function updateFechamento(id: number, updates: Partial<Fechamento>) {
     try {
+      console.log('🔄 Atualizando fechamento:', { id, updates }) // Debug
+      
+      // Verificar se os dados estão corretos
+      if (!id || typeof id !== 'number') {
+        throw new Error('ID inválido fornecido para updateFechamento')
+      }
+      
+      if (!updates || Object.keys(updates).length === 0) {
+        throw new Error('Nenhuma atualização fornecida')
+      }
+      
       const { data, error } = await supabase
         .from('fechamentos')
         .update(updates)
@@ -121,13 +145,46 @@ export function useFechamentos() {
         `)
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ Erro do Supabase:', error)
+        throw error
+      }
 
+      console.log('✅ Fechamento atualizado com sucesso:', data) // Debug
+      
       setFechamentos(prev => prev.map(f => f.id === id ? data : f))
       return { success: true, data }
-    } catch (error) {
-      console.error('Erro ao atualizar fechamento:', error)
-      return { success: false, error }
+    } catch (error: unknown) {
+      // Função helper para extrair mensagem de erro seguramente
+      const getErrorMessage = (err: unknown): string => {
+        if (err instanceof Error) {
+          return err.message
+        }
+        if (typeof err === 'string') {
+          return err
+        }
+        if (err && typeof err === 'object' && 'message' in err) {
+          return String((err as any).message)
+        }
+        if (err && typeof err === 'object') {
+          return JSON.stringify(err)
+        }
+        return 'Erro desconhecido'
+      }
+
+      const errorMessage = getErrorMessage(error)
+      
+      console.error('❌ Erro ao atualizar fechamento:', {
+        error: error,
+        message: errorMessage,
+        type: typeof error,
+        isError: error instanceof Error
+      })
+      
+      return { 
+        success: false, 
+        error: errorMessage
+      }
     }
   }
 
@@ -161,9 +218,22 @@ export function useFechamentos() {
   
       setFechamentos(prev => prev.filter(f => f.id !== id))
       return { success: true }
-    } catch (error) {
+    } catch (error: unknown) {
+      const getErrorMessage = (err: unknown): string => {
+        if (err instanceof Error) {
+          return err.message
+        }
+        if (typeof err === 'string') {
+          return err
+        }
+        if (err && typeof err === 'object' && 'message' in err) {
+          return String((err as any).message)
+        }
+        return 'Erro ao deletar fechamento'
+      }
+
       console.error('Erro ao deletar fechamento:', error)
-      return { success: false, error }
+      return { success: false, error: getErrorMessage(error) }
     }
   }
 
