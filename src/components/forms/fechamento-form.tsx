@@ -1,4 +1,3 @@
-// src/components/forms/fechamento-form.tsx
 'use client'
 
 import { useState } from 'react'
@@ -7,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Fechamento } from '@/types'
 import { formatCurrency } from '@/lib/utils'
+import { useToast } from '@/hooks/use-toast'
 
 interface FechamentoFormProps {
   fechamento: Fechamento
@@ -25,6 +25,7 @@ export function FechamentoForm({ fechamento, onSubmit, onCancel }: FechamentoFor
     valor_total: fechamento.valor_total
   })
   const [loading, setLoading] = useState(false)
+  const toast = useToast()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -32,6 +33,17 @@ export function FechamentoForm({ fechamento, onSubmit, onCancel }: FechamentoFor
     try {
       setLoading(true)
       
+      // Validações
+      if (formData.total_p < 0 || formData.total_m < 0 || formData.total_g < 0) {
+        toast.warning('Valores Inválidos', 'As quantidades não podem ser negativas.')
+        return
+      }
+
+      if (formData.valor_total < 0) {
+        toast.warning('Valor Inválido', 'O valor total não pode ser negativo.')
+        return
+      }
+
       // Enviar apenas os campos que existem na tabela atual
       const updates: Partial<Fechamento> = {
         status: formData.status,
@@ -41,23 +53,28 @@ export function FechamentoForm({ fechamento, onSubmit, onCancel }: FechamentoFor
         total_g: formData.total_g,
         valor_total: formData.valor_total
       }
-  
+
       // Adicionar campos novos apenas se não estiverem vazios
       if (formData.ultimo_erro) {
         updates.ultimo_erro = formData.ultimo_erro
       }
-  
+
+      toast.info('Salvando...', 'Atualizando fechamento...')
       const result = await onSubmit(updates)
       
       if (result.success) {
-        alert('Fechamento atualizado com sucesso!')
+        toast.success(
+          'Fechamento Atualizado!', 
+          `As alterações foram salvas com sucesso.`,
+          { label: 'Ver Fechamentos', url: '/fechamentos' }
+        )
         onCancel()
       } else {
-        alert('Erro ao atualizar fechamento!')
+        toast.error('Erro ao Salvar', 'Não foi possível atualizar o fechamento. Tente novamente.')
       }
     } catch (error) {
       console.error('Erro no formulário:', error)
-      alert('Erro ao atualizar fechamento!')
+      toast.error('Erro Inesperado', 'Ocorreu um erro ao processar a solicitação.')
     } finally {
       setLoading(false)
     }
@@ -279,7 +296,14 @@ export function FechamentoForm({ fechamento, onSubmit, onCancel }: FechamentoFor
           {/* Botões */}
           <div className="flex space-x-4 pt-4">
             <Button type="submit" disabled={loading} className="flex-1">
-              {loading ? 'Salvando...' : 'Salvar Alterações'}
+              {loading ? (
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Salvando...</span>
+                </div>
+              ) : (
+                'Salvar Alterações'
+              )}
             </Button>
             <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
               Cancelar

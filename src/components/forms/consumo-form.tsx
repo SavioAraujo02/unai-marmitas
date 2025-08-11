@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Empresa, ItemExtra } from '@/types'
 import { getPrecoMarmitaFromConfig, calcularValorComDescontoComPrecos } from '@/lib/utils'
 import { Plus, Minus, X, Trash2 } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 
 interface ConsumoFormProps {
   empresas: Empresa[]
@@ -28,6 +29,7 @@ export function ConsumoForm({ empresas, onSubmit, selectedDate }: ConsumoFormPro
   const [novoItem, setNovoItem] = useState({ nome: '', preco: 0, quantidade: 1 })
   const [observacoes, setObservacoes] = useState('')
   const [loading, setLoading] = useState(false)
+  const toast = useToast()
   
   // Estado para preços carregados das configurações
 const [precos, setPrecos] = useState({ P: 15, M: 18, G: 22 })

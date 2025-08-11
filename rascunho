@@ -4,7 +4,7 @@
 git add .
 
 # 3. Commit com uma mensagem descritiva
-git commit -m "Fix: Corrigir layout da página de empresas"
+git commit -m "Fix: Várias mudanças"
 
 # 4. Push para o GitHub
 git push origin main
