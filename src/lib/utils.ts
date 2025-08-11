@@ -1,4 +1,5 @@
-// src/lib/utils.ts
+import { supabase } from './supabase'
+
 export function cn(...inputs: (string | undefined | null | boolean)[]): string {
   return inputs.filter(Boolean).join(' ')
 }
@@ -45,7 +46,50 @@ export function getStatusColor(status: string): string {
   }
 }
 
-export function getPrecoMarmita(tamanho: 'P' | 'M' | 'G'): number {
+// FUNÇÃO ATUALIZADA PARA BUSCAR PREÇOS DAS CONFIGURAÇÕES DO LOCALSTORAGE
+export async function getPrecoMarmita(tamanho: 'P' | 'M' | 'G'): Promise<number> {
+  try {
+    // Buscar do localStorage onde as configurações estão sendo salvas
+    const configSalvas = localStorage.getItem('unai-marmitas-config')
+    if (configSalvas) {
+      const config = JSON.parse(configSalvas)
+      const chavePreco = `marmita_${tamanho.toLowerCase()}`
+      const preco = config.precos?.[chavePreco]
+      if (preco && preco > 0) {
+        return preco
+      }
+    }
+    
+    // Fallback para preços padrão
+    return getPrecoMarmitaFallback(tamanho)
+  } catch (error) {
+    console.error('Erro ao buscar preço:', error)
+    return getPrecoMarmitaFallback(tamanho)
+  }
+}
+
+// FUNÇÃO SÍNCRONA PARA BUSCAR PREÇOS DO LOCALSTORAGE
+export function getPrecoMarmitaFromConfig(tamanho: 'P' | 'M' | 'G'): number {
+  try {
+    const configSalvas = localStorage.getItem('unai-marmitas-config')
+    if (configSalvas) {
+      const config = JSON.parse(configSalvas)
+      const chavePreco = `marmita_${tamanho.toLowerCase()}`
+      const preco = config.precos?.[chavePreco]
+      if (preco && preco > 0) {
+        return preco
+      }
+    }
+    
+    return getPrecoMarmitaFallback(tamanho)
+  } catch (error) {
+    console.error('Erro ao buscar preço:', error)
+    return getPrecoMarmitaFallback(tamanho)
+  }
+}
+
+// FUNÇÃO DE FALLBACK COM PREÇOS PADRÃO
+export function getPrecoMarmitaFallback(tamanho: 'P' | 'M' | 'G'): number {
   switch (tamanho) {
     case 'P': return 15.00
     case 'M': return 18.00
@@ -54,14 +98,64 @@ export function getPrecoMarmita(tamanho: 'P' | 'M' | 'G'): number {
   }
 }
 
-// NOVA FUNÇÃO PARA CALCULAR VALOR COM DESCONTO
-export function calcularValorComDesconto(
+// FUNÇÃO SÍNCRONA PARA COMPATIBILIDADE (usar apenas quando necessário)
+export function getPrecoMarmitaSync(tamanho: 'P' | 'M' | 'G'): number {
+  return getPrecoMarmitaFallback(tamanho)
+}
+
+// NOVA FUNÇÃO PARA CALCULAR VALOR COM DESCONTO (ASYNC)
+export async function calcularValorComDesconto(
+  tamanho: 'P' | 'M' | 'G', 
+  quantidade: number, 
+  itensExtras: { nome: string; preco: number; quantidade: number }[],
+  descontoPercentual: number = 0
+): Promise<{ valorMarmitas: number; valorExtras: number; valorDesconto: number; valorTotal: number }> {
+  const precoMarmita = await getPrecoMarmita(tamanho)
+  const valorMarmitas = precoMarmita * quantidade
+  const valorExtras = itensExtras.reduce((sum, item) => sum + (item.preco * item.quantidade), 0)
+  const subtotal = valorMarmitas + valorExtras
+  const valorDesconto = (subtotal * descontoPercentual) / 100
+  const valorTotal = subtotal - valorDesconto
+
+  return {
+    valorMarmitas,
+    valorExtras,
+    valorDesconto,
+    valorTotal
+  }
+}
+
+// FUNÇÃO SÍNCRONA PARA COMPATIBILIDADE (mantém a original)
+export function calcularValorComDescontoSync(
   tamanho: 'P' | 'M' | 'G', 
   quantidade: number, 
   itensExtras: { nome: string; preco: number; quantidade: number }[],
   descontoPercentual: number = 0
 ): { valorMarmitas: number; valorExtras: number; valorDesconto: number; valorTotal: number } {
-  const precoMarmita = getPrecoMarmita(tamanho)
+  const precoMarmita = getPrecoMarmitaSync(tamanho)
+  const valorMarmitas = precoMarmita * quantidade
+  const valorExtras = itensExtras.reduce((sum, item) => sum + (item.preco * item.quantidade), 0)
+  const subtotal = valorMarmitas + valorExtras
+  const valorDesconto = (subtotal * descontoPercentual) / 100
+  const valorTotal = subtotal - valorDesconto
+
+  return {
+    valorMarmitas,
+    valorExtras,
+    valorDesconto,
+    valorTotal
+  }
+}
+
+// FUNÇÃO SÍNCRONA ATUALIZADA PARA USAR PREÇOS CARREGADOS
+export function calcularValorComDescontoComPrecos(
+  tamanho: 'P' | 'M' | 'G', 
+  quantidade: number, 
+  itensExtras: { nome: string; preco: number; quantidade: number }[],
+  descontoPercentual: number = 0,
+  precos: { P: number; M: number; G: number }
+): { valorMarmitas: number; valorExtras: number; valorDesconto: number; valorTotal: number } {
+  const precoMarmita = precos[tamanho]
   const valorMarmitas = precoMarmita * quantidade
   const valorExtras = itensExtras.reduce((sum, item) => sum + (item.preco * item.quantidade), 0)
   const subtotal = valorMarmitas + valorExtras

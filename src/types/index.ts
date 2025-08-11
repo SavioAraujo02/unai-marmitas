@@ -35,7 +35,6 @@ export interface Consumo {
   empresa?: Empresa;
 }
 
-// Resto dos tipos permanece igual...
 export interface Fechamento {
   id: number;
   empresa_id: number;
@@ -45,7 +44,10 @@ export interface Fechamento {
   total_m: number;
   total_g: number;
   valor_total: number;
-  status: 'pendente' | 'enviado' | 'pago' | 'erro';
+  status: 'pendente' | 'relatorio_enviado' | 'nf_pendente' | 'nf_enviada' | 'pagamento_pendente' | 'concluido' | 'erro_relatorio' | 'erro_nf' | 'erro_pagamento';
+  etapa_atual?: 'relatorio' | 'nota_fiscal' | 'pagamento' | 'concluido';
+  ultimo_erro?: string;
+  data_ultimo_envio?: string;
   data_fechamento?: string;
   observacoes?: string;
   empresa?: Empresa;

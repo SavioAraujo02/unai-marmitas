@@ -48,6 +48,47 @@ export function FechamentosTable({
     }
   }
 
+  function getStatusInfo(status: string) {
+    switch (status) {
+      case 'pendente':
+        return { color: 'bg-gray-100 text-gray-800', icon: '⏳', label: 'Pendente', etapa: 1 }
+      case 'relatorio_enviado':
+        return { color: 'bg-blue-100 text-blue-800', icon: '📊', label: 'Relatório Enviado', etapa: 2 }
+      case 'nf_pendente':
+        return { color: 'bg-yellow-100 text-yellow-800', icon: '📄', label: 'NF Pendente', etapa: 3 }
+      case 'nf_enviada':
+        return { color: 'bg-purple-100 text-purple-800', icon: '📋', label: 'NF Enviada', etapa: 4 }
+      case 'pagamento_pendente':
+        return { color: 'bg-orange-100 text-orange-800', icon: '💰', label: 'Aguardando Pagamento', etapa: 5 }
+      case 'concluido':
+        return { color: 'bg-green-100 text-green-800', icon: '✅', label: 'Concluído', etapa: 6 }
+      case 'erro_relatorio':
+        return { color: 'bg-red-100 text-red-800', icon: '❌', label: 'Erro no Relatório', etapa: 1 }
+      case 'erro_nf':
+        return { color: 'bg-red-100 text-red-800', icon: '❌', label: 'Erro na NF', etapa: 3 }
+      case 'erro_pagamento':
+        return { color: 'bg-red-100 text-red-800', icon: '❌', label: 'Erro no Pagamento', etapa: 5 }
+      default:
+        return { color: 'bg-gray-100 text-gray-800', icon: '❓', label: 'Desconhecido', etapa: 0 }
+    }
+  }
+  
+  function ProgressBar({ status }: { status: string }) {
+    const statusInfo = getStatusInfo(status)
+    const isError = status.includes('erro')
+    
+    return (
+      <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+        <div 
+          className={`h-2 rounded-full transition-all duration-300 ${
+            isError ? 'bg-red-500' : 'bg-green-500'
+          }`}
+          style={{ width: `${(statusInfo.etapa / 6) * 100}%` }}
+        />
+      </div>
+    )
+  }
+
   if (fechamentos.length === 0) {
     return (
       <Card>
@@ -129,20 +170,25 @@ export function FechamentosTable({
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(fechamento.status)}`}>
-                      {fechamento.status === 'pendente' && '🟡 Pendente'}
-                      {fechamento.status === 'enviado' && '🔵 Enviado'}
-                      {fechamento.status === 'pago' && '🟢 Pago'}
-                      {fechamento.status === 'erro' && '🔴 Erro'}
-                    </span>
-                    {fechamento.data_fechamento && (
-                      <div className="text-xs text-gray-500 mt-1">
-                        {new Date(fechamento.data_fechamento).toLocaleDateString('pt-BR')}
-                      </div>
-                    )}
+                    <div className="space-y-2">
+                      <ProgressBar status={fechamento.status} />
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusInfo(fechamento.status).color}`}>
+                        {getStatusInfo(fechamento.status).icon} {getStatusInfo(fechamento.status).label}
+                      </span>
+                      {fechamento.data_fechamento && (
+                        <div className="text-xs text-gray-500">
+                          {new Date(fechamento.data_fechamento).toLocaleDateString('pt-BR')}
+                        </div>
+                      )}
+                      {fechamento.ultimo_erro && (
+                        <div className="text-xs text-red-600 bg-red-50 p-1 rounded">
+                          {fechamento.ultimo_erro}
+                        </div>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-1">
+                    <div className="flex flex-wrap gap-1">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -159,34 +205,44 @@ export function FechamentosTable({
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onGerarRelatorio(fechamento)}
-                        title="Gerar relatório"
-                      >
-                        <FileText className="h-4 w-4" />
-                      </Button>
-                      {fechamento.status === 'pendente' && (
+                      
+                      {/* Botões específicos por etapa */}
+                      {(fechamento.status === 'pendente' || fechamento.status === 'erro_relatorio') && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onGerarRelatorio(fechamento)}
+                          title="Enviar Relatório"
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                      )}
+                      
+                      {(fechamento.status === 'relatorio_enviado' || fechamento.status === 'erro_nf') && (
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => onEnviarCobranca(fechamento)}
-                          title="Enviar cobrança"
+                          title="Enviar Nota Fiscal"
+                          className="text-yellow-600 hover:text-yellow-800"
                         >
                           <Send className="h-4 w-4" />
                         </Button>
                       )}
-                      {fechamento.status === 'enviado' && (
+                      
+                      {(fechamento.status === 'nf_enviada' || fechamento.status === 'erro_pagamento') && (
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => onMarcarPago(fechamento)}
-                          title="Marcar como pago"
+                          title="Confirmar Pagamento"
+                          className="text-green-600 hover:text-green-800"
                         >
                           <CreditCard className="h-4 w-4" />
                         </Button>
                       )}
+                      
                       <Button
                         variant="ghost"
                         size="sm"

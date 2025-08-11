@@ -133,13 +133,32 @@ export function useFechamentos() {
 
   async function deleteFechamento(id: number) {
     try {
+      // Primeiro, verificar se existem envios relacionados
+      const { data: envios, error: enviosError } = await supabase
+        .from('envios_documentos')
+        .select('id')
+        .eq('fechamento_id', id)
+  
+      if (enviosError) throw enviosError
+  
+      // Se existem envios, deletar primeiro
+      if (envios && envios.length > 0) {
+        const { error: deleteEnviosError } = await supabase
+          .from('envios_documentos')
+          .delete()
+          .eq('fechamento_id', id)
+  
+        if (deleteEnviosError) throw deleteEnviosError
+      }
+  
+      // Agora deletar o fechamento
       const { error } = await supabase
         .from('fechamentos')
         .delete()
         .eq('id', id)
-
+  
       if (error) throw error
-
+  
       setFechamentos(prev => prev.filter(f => f.id !== id))
       return { success: true }
     } catch (error) {
@@ -154,9 +173,18 @@ export function useFechamentos() {
     totalFaturamento: fechamentos.reduce((sum, f) => sum + f.valor_total, 0),
     totalMarmitas: fechamentos.reduce((sum, f) => sum + f.total_p + f.total_m + f.total_g, 0),
     pendentes: fechamentos.filter(f => f.status === 'pendente').length,
-    enviados: fechamentos.filter(f => f.status === 'enviado').length,
-    pagos: fechamentos.filter(f => f.status === 'pago').length,
-    comErro: fechamentos.filter(f => f.status === 'erro').length
+    relatorioEnviado: fechamentos.filter(f => f.status === 'relatorio_enviado').length,
+    nfPendente: fechamentos.filter(f => f.status === 'nf_pendente').length,
+    nfEnviada: fechamentos.filter(f => f.status === 'nf_enviada').length,
+    pagamentoPendente: fechamentos.filter(f => f.status === 'pagamento_pendente').length,
+    concluidos: fechamentos.filter(f => f.status === 'concluido').length,
+    comErroRelatorio: fechamentos.filter(f => f.status === 'erro_relatorio').length,
+    comErroNF: fechamentos.filter(f => f.status === 'erro_nf').length,
+    comErroPagamento: fechamentos.filter(f => f.status === 'erro_pagamento').length,
+    // Totais agrupados para compatibilidade
+    enviados: fechamentos.filter(f => ['relatorio_enviado', 'nf_pendente', 'nf_enviada', 'pagamento_pendente'].includes(f.status)).length,
+    pagos: fechamentos.filter(f => f.status === 'concluido').length,
+    comErro: fechamentos.filter(f => f.status.includes('erro')).length
   }
 
   return {

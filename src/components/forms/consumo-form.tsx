@@ -1,12 +1,11 @@
-// src/components/forms/consumo-form.tsx
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Empresa, ItemExtra } from '@/types'
-import { getPrecoMarmita, calcularValorComDesconto } from '@/lib/utils'
+import { getPrecoMarmitaFromConfig, calcularValorComDescontoComPrecos } from '@/lib/utils'
 import { Plus, Minus, X, Trash2 } from 'lucide-react'
 
 interface ConsumoFormProps {
@@ -29,15 +28,41 @@ export function ConsumoForm({ empresas, onSubmit, selectedDate }: ConsumoFormPro
   const [novoItem, setNovoItem] = useState({ nome: '', preco: 0, quantidade: 1 })
   const [observacoes, setObservacoes] = useState('')
   const [loading, setLoading] = useState(false)
+  
+  // Estado para preços carregados das configurações
+const [precos, setPrecos] = useState({ P: 15, M: 18, G: 22 })
+const [precosLoading, setPrecosLoading] = useState(true)
+
+// Carregar preços das configurações
+useEffect(() => {
+  function carregarPrecos() {
+    try {
+      setPrecosLoading(true)
+      // Usar função síncrona que busca do localStorage
+      const precoP = getPrecoMarmitaFromConfig('P')
+      const precoM = getPrecoMarmitaFromConfig('M')
+      const precoG = getPrecoMarmitaFromConfig('G')
+      setPrecos({ P: precoP, M: precoM, G: precoG })
+    } catch (error) {
+      console.error('Erro ao carregar preços:', error)
+      // Manter preços padrão em caso de erro
+    } finally {
+      setPrecosLoading(false)
+    }
+  }
+  carregarPrecos()
+}, [])
 
   const empresaSelecionada = empresas.find(e => e.id === selectedEmpresa)
   const descontoPercentual = empresaSelecionada?.desconto_percentual || 0
   
-  const { valorMarmitas, valorExtras, valorDesconto, valorTotal } = calcularValorComDesconto(
+  // Usar função com preços carregados para cálculos em tempo real na interface
+  const { valorMarmitas, valorExtras, valorDesconto, valorTotal } = calcularValorComDescontoComPrecos(
     selectedTamanho, 
     quantidade, 
     itensExtras, 
-    descontoPercentual
+    descontoPercentual,
+    precos
   )
 
   async function handleSubmit(e: React.FormEvent) {
@@ -65,7 +90,6 @@ export function ConsumoForm({ empresas, onSubmit, selectedDate }: ConsumoFormPro
         setItensExtras([])
         setNovoItem({ nome: '', preco: 0, quantidade: 1 })
         setObservacoes('')
-      } else {
       }
     } catch (error) {
       alert('Erro ao registrar consumo!')
@@ -98,6 +122,16 @@ export function ConsumoForm({ empresas, onSubmit, selectedDate }: ConsumoFormPro
 
   function removerItemExtra(index: number) {
     setItensExtras(prev => prev.filter((_, i) => i !== index))
+  }
+
+  if (precosLoading) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-center">
+          <div className="text-lg text-gray-600">Carregando preços...</div>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -164,7 +198,7 @@ export function ConsumoForm({ empresas, onSubmit, selectedDate }: ConsumoFormPro
                   <div className="text-center">
                     <div className="text-2xl font-bold">{tamanho}</div>
                     <div className="text-sm text-gray-600">
-                      R$ {getPrecoMarmita(tamanho).toFixed(2)}
+                      R$ {precos[tamanho].toFixed(2)}
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
                       {tamanho === 'P' && 'Pequena'}
@@ -205,10 +239,10 @@ export function ConsumoForm({ empresas, onSubmit, selectedDate }: ConsumoFormPro
                   onClick={() => setQuantidade(quantidade + 1)}
                 >
                   <Plus className="h-4 w-4" />
-                  </Button>
+                </Button>
                 <span className="text-sm text-gray-600">
-                  = R$ {valorMarmitas.toFixed(2)}
-                </span>
+                = R$ {(precos[selectedTamanho] * quantidade).toFixed(2)}
+              </span>
               </div>
             </div>
           </div>
@@ -335,7 +369,7 @@ export function ConsumoForm({ empresas, onSubmit, selectedDate }: ConsumoFormPro
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
                 <span>{quantidade}x Marmita {selectedTamanho}</span>
-                <span>R$ {valorMarmitas.toFixed(2)}</span>
+                <span>R$ {(precos[selectedTamanho] * quantidade).toFixed(2)}</span>
               </div>
               {itensExtras.map((item, index) => (
                 <div key={index} className="flex justify-between text-gray-600">
@@ -346,7 +380,7 @@ export function ConsumoForm({ empresas, onSubmit, selectedDate }: ConsumoFormPro
               <div className="border-t pt-2">
                 <div className="flex justify-between">
                   <span>Subtotal:</span>
-                  <span>R$ {(valorMarmitas + valorExtras).toFixed(2)}</span>
+                  <span>R$ {(precos[selectedTamanho] * quantidade + valorExtras).toFixed(2)}</span>
                 </div>
                 {descontoPercentual > 0 && (
                   <div className="flex justify-between text-green-600">

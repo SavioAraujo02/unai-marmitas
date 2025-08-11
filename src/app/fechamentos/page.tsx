@@ -86,17 +86,8 @@ export default function FechamentosPage() {
   }
 
   async function handleGerarRelatorio(fechamento: Fechamento) {
-    const result = await gerarRelatorioEmpresa(
-      fechamento.empresa_id,
-      selectedMonth.mes,
-      selectedMonth.ano
-    )
-    
-    if (result.success) {
-      alert('Relatório PDF gerado com sucesso!')
-    } else {
-      alert(result.error || 'Erro ao gerar relatório!')
-    }
+    // Esta função agora é a mesma que handleEnviarRelatorio
+    await handleEnviarRelatorio(fechamento)
   }
 
   async function handleGerarConsolidado() {
@@ -109,15 +100,54 @@ export default function FechamentosPage() {
     }
   }
 
-  async function handleEnviarCobranca(fechamento: Fechamento) {
-    const result = await updateFechamento(fechamento.id, { status: 'enviado' })
+  async function handleEnviarRelatorio(fechamento: Fechamento) {
+    const result = await gerarRelatorioEmpresa(
+      fechamento.empresa_id,
+      selectedMonth.mes,
+      selectedMonth.ano
+    )
+    
     if (result.success) {
-      alert(`Cobrança enviada para ${fechamento.empresa?.nome}!`)
+      await updateFechamento(fechamento.id, { 
+        status: 'relatorio_enviado',
+        data_ultimo_envio: new Date().toISOString()
+      })
+      alert(`Relatório enviado para ${fechamento.empresa?.nome}!`)
+    } else {
+      await updateFechamento(fechamento.id, { 
+        status: 'erro_relatorio',
+        ultimo_erro: result.error || 'Erro ao enviar relatório'
+      })
+      alert(result.error || 'Erro ao enviar relatório!')
     }
   }
-
+  
+  async function handleEnviarCobranca(fechamento: Fechamento) {
+    // Simular envio de NF (aqui você integraria com seu sistema de NF)
+    const sucesso = Math.random() > 0.3 // 70% de chance de sucesso para teste
+    
+    if (sucesso) {
+      const result = await updateFechamento(fechamento.id, { 
+        status: 'nf_enviada',
+        data_ultimo_envio: new Date().toISOString()
+      })
+      if (result.success) {
+        alert(`Nota Fiscal enviada para ${fechamento.empresa?.nome}!`)
+      }
+    } else {
+      await updateFechamento(fechamento.id, { 
+        status: 'erro_nf',
+        ultimo_erro: 'Erro ao gerar/enviar nota fiscal'
+      })
+      alert('Erro ao enviar Nota Fiscal!')
+    }
+  }
+  
   async function handleMarcarPago(fechamento: Fechamento) {
-    const result = await updateFechamento(fechamento.id, { status: 'pago' })
+    const result = await updateFechamento(fechamento.id, { 
+      status: 'concluido',
+      data_ultimo_envio: new Date().toISOString()
+    })
     if (result.success) {
       alert(`Pagamento confirmado para ${fechamento.empresa?.nome}!`)
     }
@@ -243,16 +273,22 @@ export default function FechamentosPage() {
                 <div className="mb-4">
                   <p className="text-sm text-gray-600 mb-1">Status</p>
                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                    selectedFechamento.status === 'pendente' ? 'bg-yellow-100 text-yellow-800' :
-                    selectedFechamento.status === 'enviado' ? 'bg-blue-100 text-blue-800' :
-                    selectedFechamento.status === 'pago' ? 'bg-green-100 text-green-800' :
-                    'bg-red-100 text-red-800'
-                  }`}>
-                    {selectedFechamento.status === 'pendente' && '🟡 Pendente'}
-                    {selectedFechamento.status === 'enviado' && '🔵 Enviado'}
-                    {selectedFechamento.status === 'pago' && '🟢 Pago'}
-                    {selectedFechamento.status === 'erro' && '🔴 Erro'}
-                  </span>
+                  selectedFechamento.status === 'pendente' ? 'bg-gray-100 text-gray-800' :
+                  selectedFechamento.status === 'relatorio_enviado' ? 'bg-blue-100 text-blue-800' :
+                  selectedFechamento.status === 'nf_pendente' ? 'bg-yellow-100 text-yellow-800' :
+                  selectedFechamento.status === 'nf_enviada' ? 'bg-purple-100 text-purple-800' :
+                  selectedFechamento.status === 'pagamento_pendente' ? 'bg-orange-100 text-orange-800' :
+                  selectedFechamento.status === 'concluido' ? 'bg-green-100 text-green-800' :
+                  'bg-red-100 text-red-800'
+                }`}>
+                  {selectedFechamento.status === 'pendente' && '⏳ Pendente'}
+                  {selectedFechamento.status === 'relatorio_enviado' && '📊 Relatório Enviado'}
+                  {selectedFechamento.status === 'nf_pendente' && '📄 NF Pendente'}
+                  {selectedFechamento.status === 'nf_enviada' && '📋 NF Enviada'}
+                  {selectedFechamento.status === 'pagamento_pendente' && '💰 Aguardando Pagamento'}
+                  {selectedFechamento.status === 'concluido' && '✅ Concluído'}
+                  {selectedFechamento.status.includes('erro') && '❌ Erro'}
+                </span>
                 </div>
                 
                 {selectedFechamento.observacoes && (
@@ -290,7 +326,7 @@ export default function FechamentosPage() {
     )
   }
 
-  // Modo lista
+    // Modo lista
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -300,23 +336,23 @@ export default function FechamentosPage() {
           <p className="text-gray-600">Gerencie os fechamentos e cobranças mensais</p>
         </div>
         <div className="flex space-x-2">
-        <Button variant="outline" onClick={refetch}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Atualizar
-        </Button>
-        <Button variant="outline" onClick={handleExportarTodos}>
-          <Download className="h-4 w-4 mr-2" />
-          Exportar CSV
-        </Button>
-        <Button variant="outline" onClick={handleGerarConsolidado} disabled={pdfLoading}>
-          <FileText className="h-4 w-4 mr-2" />
-          {pdfLoading ? 'Gerando...' : 'Relatório PDF'}
-        </Button>
-        <Button onClick={handleGerarAutomatico}>
-          <Plus className="h-4 w-4 mr-2" />
-          Gerar Automático
-        </Button>
-      </div>
+          <Button variant="outline" onClick={refetch}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Atualizar
+          </Button>
+          <Button variant="outline" onClick={handleExportarTodos}>
+            <Download className="h-4 w-4 mr-2" />
+            Exportar CSV
+          </Button>
+          <Button variant="outline" onClick={handleGerarConsolidado} disabled={pdfLoading}>
+            <FileText className="h-4 w-4 mr-2" />
+            {pdfLoading ? 'Gerando...' : 'Relatório PDF'}
+          </Button>
+          <Button onClick={handleGerarAutomatico}>
+            <Plus className="h-4 w-4 mr-2" />
+            Gerar Automático
+          </Button>
+        </div>
       </div>
 
       {/* Seletor de mês */}
@@ -400,17 +436,56 @@ export default function FechamentosPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Pendentes</p>
-                <p className="text-2xl font-bold text-orange-600">{stats.pendentes}</p>
+                <p className="text-sm font-medium text-gray-600">Em Andamento</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.pendentes + stats.relatorioEnviado + stats.nfPendente + stats.nfEnviada + stats.pagamentoPendente}</p>
                 <p className="text-xs text-gray-500">
-                  Pagos: {stats.pagos} | Erros: {stats.comErro}
+                  Concluídos: {stats.concluidos} | Erros: {stats.comErro}
                 </p>
               </div>
-              <AlertTriangle className="h-8 w-8 text-orange-600" />
+              <AlertTriangle className="h-8 w-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Novo card com breakdown detalhado */}
+      <Card className="border-yellow-200">
+        <CardHeader>
+          <CardTitle className="text-lg">📊 Progresso Detalhado</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 text-center">
+            <div className="bg-gray-50 p-3 rounded">
+              <div className="text-lg font-bold text-gray-600">{stats.pendentes}</div>
+              <div className="text-xs text-gray-500">⏳ Pendentes</div>
+            </div>
+            <div className="bg-blue-50 p-3 rounded">
+              <div className="text-lg font-bold text-blue-600">{stats.relatorioEnviado}</div>
+              <div className="text-xs text-blue-500">📊 Relatório OK</div>
+            </div>
+            <div className="bg-yellow-50 p-3 rounded">
+              <div className="text-lg font-bold text-yellow-600">{stats.nfPendente}</div>
+              <div className="text-xs text-yellow-500">📄 NF Pendente</div>
+            </div>
+            <div className="bg-purple-50 p-3 rounded">
+              <div className="text-lg font-bold text-purple-600">{stats.nfEnviada}</div>
+              <div className="text-xs text-purple-500">📋 NF Enviada</div>
+            </div>
+            <div className="bg-orange-50 p-3 rounded">
+              <div className="text-lg font-bold text-orange-600">{stats.pagamentoPendente}</div>
+              <div className="text-xs text-orange-500">💰 Aguard. Pag.</div>
+            </div>
+            <div className="bg-green-50 p-3 rounded">
+              <div className="text-lg font-bold text-green-600">{stats.concluidos}</div>
+              <div className="text-xs text-green-500">✅ Concluídos</div>
+            </div>
+            <div className="bg-red-50 p-3 rounded">
+              <div className="text-lg font-bold text-red-600">{stats.comErro}</div>
+              <div className="text-xs text-red-500">❌ Com Erro</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Alertas */}
       {stats.comErro > 0 && (
@@ -435,7 +510,7 @@ export default function FechamentosPage() {
         onEdit={handleEdit}
         onDelete={handleDelete}
         onView={handleView}
-        onGerarRelatorio={handleGerarRelatorio}
+        onGerarRelatorio={handleEnviarRelatorio}
         onEnviarCobranca={handleEnviarCobranca}
         onMarcarPago={handleMarcarPago}
       />

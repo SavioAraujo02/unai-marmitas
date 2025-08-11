@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Consumo, Empresa, ItemExtra } from '@/types'
-import { getTodayString, getPrecoMarmita, calcularValorComDesconto } from '@/lib/utils'
+import { getTodayString, calcularValorComDesconto, getPrecoMarmita } from '@/lib/utils'
 import { useNotifications } from '@/hooks/use-notifications'
 
 export function useConsumos() {
@@ -76,14 +76,15 @@ export function useConsumos() {
     try {
       const empresa = empresas.find(e => e.id === empresaId)
       if (!empresa) throw new Error('Empresa não encontrada')
-
-      const { valorMarmitas, valorExtras, valorDesconto, valorTotal } = calcularValorComDesconto(
+  
+      // Usar a função assíncrona para buscar preços das configurações
+      const { valorMarmitas, valorExtras, valorDesconto, valorTotal } = await calcularValorComDesconto(
         tamanho, 
         quantidade, 
         itensExtras, 
         empresa.desconto_percentual || 0
       )
-
+  
       const { data, error } = await supabase
         .from('consumos')
         .insert({
@@ -95,7 +96,7 @@ export function useConsumos() {
           preco: valorTotal, // Valor total já com desconto
           itens_extras: itensExtras,
           valor_extras: valorExtras,
-          valor_desconto: valorDesconto, // NOVO
+          valor_desconto: valorDesconto,
           observacoes
         })
         .select(`
@@ -103,18 +104,18 @@ export function useConsumos() {
           empresa:empresas(nome, responsavel, desconto_percentual)
         `)
         .single()
-
+  
       if (error) throw error
-
+  
       setConsumos(prev => [data, ...prev])
-
+  
       // Notificação de sucesso
       showSuccess(
         'Consumo Registrado!', 
         `${quantidade}x marmita ${tamanho} para ${empresa.nome}`,
         { label: 'Ver Consumos', url: '/consumos' }
       )
-
+  
       return { success: true, data }
     } catch (error) {
       console.error('Erro ao criar consumo:', error)
